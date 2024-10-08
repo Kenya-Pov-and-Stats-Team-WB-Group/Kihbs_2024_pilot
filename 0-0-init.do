@@ -19,7 +19,11 @@ if (inlist("${suser}","wb562201", "WB562201")) {
 }
 *Kevin
 else if (inlist("${suser}","wb426252", "WB426252")) {
-	local swdLocal = "C:\Users\WB426252\OneDrive - WBG\WB - Kenya\KEN_KIHBS_2024_pilot"	
+	local swdLocal = "C:\Users\WB426252\OneDrive - WBG\WB - Kenya\KIHBS_Pilot"	
+}
+*Asmelash
+else if (inlist("${suser}","wb412495", "WB412495")) {
+	local swdLocal = "C:\Users\WB412495\OneDrive - WBG\KIHBS_2024_Pilot"	
 }
 *Magara
 else if (inlist("${suser}","User")) {
