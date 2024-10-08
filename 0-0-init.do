@@ -64,21 +64,22 @@ noisily di "This command requires ipacheck. The package will now be downloaded a
 net install ipacheck, all replace from("https://raw.githubusercontent.com/PovertyAction/high-frequency-checks/master")
 ipacheck update
 }
-
 *Sursol is only used by users with access to raw data
 qui capture which sursol
 qui if _rc!=0 {
 noisily di "This command requires ipacheck. The package will now be downloaded and installed."
 	net install sursol , from("https://raw.githubusercontent.com/petbrueck/sursol/master/src") replace
 }
-
 *renvars 
 qui capture which dm88_1
 qui if _rc!=0 {
 	net install dm88_1 , from("http://www.stata-journal.com/software/sj5-4/") replace
 }
-
-
+*tabstatxls (WB users must turn off VPN)
+qui capture which github
+qui if _rc!=0 {
+	net install github, from("https://haghish.github.io/github/")
+}
 *tabstatxls (WB users must turn off VPN)
 qui capture which tabstatxls
 qui if _rc!=0 {
