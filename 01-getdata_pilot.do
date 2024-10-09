@@ -148,8 +148,89 @@ foreach c of local county { //for each county
 	restore
 }
 
+*Selected section durations
+// H Domestic tourism	H01==1
+preserve 
+use "${gsdDataRaw}/household_roster.dta", clear
+bys interview__key: egen H01_hh=max(H01)
+duplicates drop interview__key, force
+tempfile dom_tourism
+qui save `dom_tourism', replace
+restore 
+merge 1:1 interview__key using `dom_tourism', keepusing(H01_hh) keep(1 3) nogen
+betterbarci sectH_dur if H01_hh==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section H | Domestic tourism") 
+qui graph export "${gsdOutput}/sec_H_dur.jpg", as(jpg) name("Graph") quality(100) replace	
+
+// L Land ownership and tenure	L01==1
+betterbarci L01, over(A01) n  v bar title("Proportion of houshold having land") pct yscale(off)
+betterbarci sectH_dur if L01==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section L | Land ownership and tenure") 
+qui graph export "${gsdOutput}/sec_L_dur.jpg", as(jpg) name("Graph") quality(100) replace	
+
+// M	Agriculture	L01==1 & parcel_roster.Count(x=>x.L07.ContainsAny(1,2,7))
+preserve 
+use "${gsdDataRaw}/parcel_roster.dta", clear
+gen x=L07__1==1 | L07__2==1 | L07__7==1
+bys interview__key: egen L07_hh=max(x)
+duplicates drop interview__key, force
+tempfile climate
+qui save `climate', replace
+restore 
+merge 1:1 interview__key using `climate', keepusing(L07_hh) keep(1 3) nogen
+betterbarci sectM_dur if L07_hh==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section M | Land ownership and tenure") 
+qui graph export "${gsdOutput}/sec_M_dur.jpg", as(jpg) name("Graph") quality(100) replace	
+ 
+// N	Agricultural input and output	(seemingly no enabling condition?)
+betterbarci sectN_dur if L01==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section N | Agri input/output") 
+
+// O	Livestock	O01==1
+betterbarci O01, over(A01) n  v bar title("Proportion of houshold having livestock") pct yscale(off)
+betterbarci sectO_dur if O01==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section O | Livestock") 
+qui graph export "${gsdOutput}/sec_O_dur.jpg", as(jpg) name("Graph") quality(100) replace	
+
+// P	Enterprises	P02==1
+betterbarci P02, over(A01) n  v bar title("Proportion of houshold having enterprise") pct yscale(off)
+betterbarci sectP_dur if P02==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section P | Enterprise") 
+qui graph export "${gsdOutput}/sec_P_dur.jpg", as(jpg) name("Graph") quality(100) replace	
+
+// Q	Transfers	Q01==1 | Q08==1
+betterbarci Q01, over(A01) n  v bar title("Proportion of houshold reporting transfer") pct yscale(off)
+betterbarci Q08, over(A01) n  v bar title("Proportion of houshold giving enterprise") pct yscale(off)
+betterbarci sectQ_dur if Q01==1 | Q08==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section Q | Transfers") 
+qui graph export "${gsdOutput}/sec_Q_dur.jpg", as(jpg) name("Graph") quality(100) replace	
+
+// T	Climate extremes	T03!=1
+preserve 
+use "${gsdDataRaw}/climate1_roster.dta", clear
+gen x=T03!=1
+bys interview__key: egen T03_hh=max(x)
+duplicates drop interview__key, force
+tempfile climate
+qui save `climate', replace
+restore 
+merge 1:1 interview__key using `climate', keepusing(T03_hh) keep(1 3) nogen
+betterbarci T03_hh, over(A01) n  v bar title("Proportion of household w/ climate shocks") pct yscale(off)
+betterbarci sectT_dur if T03_hh==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section T | Climate shocks") 
+qui graph export "${gsdOutput}/sec_T_dur.jpg", as(jpg) name("Graph") quality(100) replace	
+
+
+
+
+
 betterbar sectF_dur dur_sec_F if A16<10, over(A16) n format(%9.2f)
 betterbar sectF_dur dur_sec_F if A16<10, over(A16) n format(%9.2f)
+
+betterbar sectF_dur dur_sec_F if A16<10, over(A16) n format(%9.2f)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
