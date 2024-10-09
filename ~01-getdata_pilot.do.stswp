@@ -119,30 +119,30 @@ foreach c of local county {
 	qui levelsof county_name if A01==`c', loc(cname)
 	dis in red "Create report for county "`cname'""
 
-	*Clean duration
-	cap betterbarci cleandur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
-	cap qui graph export "${gsdOutput}/cleandur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
-	*Raw duration
-	cap betterbarci rawdur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) 
-	cap qui graph export "${gsdOutput}/rawdur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
-	*Number of answers per minute
-	cap betterbarci answ_pm if A01==`c', over(A21) n format(%9.1f) bar title("Interviewer productivity") subtitle("Number of answers per minute") v saving("${gsdOutput}/answpm_county_`c'.gph", replace) 
-	cap qui graph export "${gsdOutput}/answpm_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
-	*Proportion of answers removed
-	cap betterbarci prop_removed if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") v pct saving("${gsdOutput}/answrem_county_`c'.gph", replace) 
-	cap qui graph export "${gsdOutput}/answrem_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
-	*Proportion of of errors
-	cap betterbarci prop_errors if entities__errors>10 & !mi(entities__errors) if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_county_`c'.gph", replace) 
-	cap qui graph export "${gsdOutput}/properrors_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
-	*Number of unanswered questions 
-	cap betterbarci n_questions_unanswered if n_questions_unanswered>10 & !mi(n_questions_unanswered)if A01==`c', over(A21) n format(%9.0f) bar title("Number of unanswered questions") v pct saving("${gsdOutput}/nunanswred_county_`c'.gph", replace) 
-	qui graph export "${gsdOutput}/nunanswred_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace	
+// 	*Clean duration
+// 	cap betterbarci cleandur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
+// 	cap qui graph export "${gsdOutput}/cleandur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+// 	*Raw duration
+// 	cap betterbarci rawdur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) 
+// 	cap qui graph export "${gsdOutput}/rawdur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+// 	*Number of answers per minute
+// 	cap betterbarci answ_pm if A01==`c', over(A21) n format(%9.1f) bar title("Interviewer productivity") subtitle("Number of answers per minute") v saving("${gsdOutput}/answpm_county_`c'.gph", replace) 
+// 	cap qui graph export "${gsdOutput}/answpm_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+// 	*Proportion of answers removed
+// 	cap betterbarci prop_removed if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") v pct saving("${gsdOutput}/answrem_county_`c'.gph", replace) 
+// 	cap qui graph export "${gsdOutput}/answrem_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+// 	*Proportion of of errors
+// 	cap betterbarci prop_errors if entities__errors>10 & !mi(entities__errors) if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_county_`c'.gph", replace) 
+// 	cap qui graph export "${gsdOutput}/properrors_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+// 	*Number of unanswered questions 
+// 	cap betterbarci n_questions_unanswered if n_questions_unanswered>10 & !mi(n_questions_unanswered)if A01==`c', over(A21) n format(%9.0f) bar title("Number of unanswered questions") v pct saving("${gsdOutput}/nunanswred_county_`c'.gph", replace) 
+// 	qui graph export "${gsdOutput}/nunanswred_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace	
 	
 	preserve 
 	qui filelist, dir("${gsdOutput}/") //find all pics in unit specific folder
-	keep if regexm(filename,"_county_`c'.jpg") 
-	gen picture=dirname+"/"+filename
-	cap qui photobook picture using "${gsdTemp}/Report_county_`cname'.pdf", replace linebreak(3) pagesize(A4) ncol(2) title("County "`cname'"") border(end,single,green) //create the photobook
+	qui keep if regexm(filename,"_county_`c'.jpg") 
+	qui gen picture=dirname+"/"+filename
+	qui photobook picture using "${gsdTemp}/Report_county_`c'.pdf", replace linebreak(3) pagesize(A4) ncol(2) title("County `c'") border(end,single,green)
 	restore
 }
 set gr on 

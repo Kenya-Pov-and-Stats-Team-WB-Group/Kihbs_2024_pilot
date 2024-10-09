@@ -142,7 +142,7 @@ foreach c of local county {
 	qui filelist, dir("${gsdOutput}/") //find all pics in unit specific folder
 	qui keep if regexm(filename,"_county_`c'.jpg") 
 	qui gen picture=dirname+"/"+filename
-	cap qui photobook picture using "${gsdTemp}/Report_county_`cname'.pdf", replace linebreak(3) pagesize(A4) ncol(2) title("County "`cname'"") border(end,single,green) //create the photobook
+	qui photobook picture using "${gsdTemp}/Report_county_`c'.pdf", replace linebreak(3) pagesize(A4) ncol(2) title("County `c'") border(end,single,green)
 	restore
 }
 set gr on 
