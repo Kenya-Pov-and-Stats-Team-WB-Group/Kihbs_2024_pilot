@@ -90,6 +90,9 @@ qui save "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", replace
 
 use "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", clear
 
+gen prop_removed=(n_removed/n_answer)*100
+gen prop_errors=(entities__errors/n_answer)*100
+
 //Overall county level diagnostics
 *Clean duration
 betterbarci cleandur_min, over(A01) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
@@ -101,11 +104,9 @@ qui graph export "${gsdOutput}/rawdur_bycounty.jpg", as(jpg) name("Graph") quali
 betterbarci answ_pm, over(A01) n format(%9.1f) bar ytitle("N. Answers") title("Interviewer productivity") subtitle("Number of answers per minute") v 
 qui graph export "${gsdOutput}/answpm_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 *Proportion of answers removed
-gen prop_removed=(n_removed/n_answer)*100
 betterbarci prop_removed, over(A01) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") v pct saving("${gsdOutput}/answrem_bycounty.gph", replace) 
 qui graph export "${gsdOutput}/answrem_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 *Proportion of of errors
-gen prop_errors=(entities__errors/n_answer)*100
 betterbarci prop_errors if entities__errors>10 & !mi(entities__errors), over(A01) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_bycounty.gph", replace) 
 qui graph export "${gsdOutput}/properrors_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 *Number of unanswered questions 
@@ -115,46 +116,40 @@ qui graph export "${gsdOutput}/nunanswred_bycounty.jpg", as(jpg) name("Graph") q
 //Enumerator level diagnostics, by county
 set gr off
 qui levelsof A01, loc(county)
-foreach c of local county {
+foreach c of local county { //for each county
 	qui levelsof county_name if A01==`c', loc(cname)
 	dis in red "Create report for county "`cname'""
 
 	*Clean duration
-	cap betterbarci cleandur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
-	cap qui graph export "${gsdOutput}/cleandur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	betterbarci cleandur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
+	qui graph export "${gsdOutput}/cleandur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
 	*Raw duration
-	cap betterbarci rawdur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) 
-	cap qui graph export "${gsdOutput}/rawdur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	betterbarci rawdur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) 
+	qui graph export "${gsdOutput}/rawdur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
 	*Number of answers per minute
-	cap betterbarci answ_pm if A01==`c', over(A21) n format(%9.1f) bar title("Interviewer productivity") subtitle("Number of answers per minute") v saving("${gsdOutput}/answpm_county_`c'.gph", replace) 
-	cap qui graph export "${gsdOutput}/answpm_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	betterbarci answ_pm if A01==`c', over(A21) n format(%9.1f) bar title("Number of answers per minute") subtitle("By enumerator") v saving("${gsdOutput}/answpm_county_`c'.gph", replace) 
+	qui graph export "${gsdOutput}/answpm_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
 	*Proportion of answers removed
-	cap betterbarci prop_removed if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") v pct saving("${gsdOutput}/answrem_county_`c'.gph", replace) 
-	cap qui graph export "${gsdOutput}/answrem_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	betterbarci prop_removed if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") subtitle("By enumerator") v pct saving("${gsdOutput}/answrem_county_`c'.gph", replace) 
+	qui graph export "${gsdOutput}/answrem_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
 	*Proportion of of errors
-	cap betterbarci prop_errors if entities__errors>10 & !mi(entities__errors) if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_county_`c'.gph", replace) 
-	cap qui graph export "${gsdOutput}/properrors_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	betterbarci prop_errors if  A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_county_`c'.gph", replace) 
+	qui graph export "${gsdOutput}/properrors_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
 	*Number of unanswered questions 
-	cap betterbarci n_questions_unanswered if n_questions_unanswered>10 & !mi(n_questions_unanswered)if A01==`c', over(A21) n format(%9.0f) bar title("Number of unanswered questions") v pct saving("${gsdOutput}/nunanswred_county_`c'.gph", replace) 
+	betterbarci n_questions_unanswered if  A01==`c', over(A21) n format(%9.0f) bar title("Number of unanswered questions") v pct saving("${gsdOutput}/nunanswred_county_`c'.gph", replace) 
 	qui graph export "${gsdOutput}/nunanswred_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace	
 	
+	*Create county specific workbook with diagnostics ind all pics in unit specific folder
 	preserve 
-	qui filelist, dir("${gsdOutput}/") //find all pics in unit specific folder
-	qui keep if regexm(filename,"_county_`c'.jpg") 
-	qui gen picture=dirname+"/"+filename
-	qui photobook picture using "${gsdTemp}/Report_county_`c'.pdf", replace linebreak(3) pagesize(A4) ncol(2) title("County `c'") border(end,single,green)
+	qui filelist, dir("${gsdOutput}/") //find graphs
+	qui keep if regexm(filename,"_county_`c'.jpg") //retain county specific graphs
+	qui gen picture=dirname+"/"+filename 
+	qui photobook picture using "${gsdTemp}/Report_county_`c'.pdf", replace linebreak(3) pagesize(A4) ncol(2) title("County `c'") border(end, single, green) //create workbook
 	restore
 }
-set gr on 
 
 betterbar sectF_dur dur_sec_F if A16<10, over(A16) n format(%9.2f)
-
 betterbar sectF_dur dur_sec_F if A16<10, over(A16) n format(%9.2f)
-
-
-
-
-
 
 
 
