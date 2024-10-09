@@ -17,7 +17,7 @@ replace sectA_dur = cleandur/60 if regexm(variable,"consen")
 replace sectYA_dur = cleandur/60 if regexm(variable,"_cons_|purch|q1_") 
 egen  nmiss =rowmiss(sectA_dur- sectYL_dur)
 br variable sectA_dur- sectYL_dur nmiss if nmiss>34
-
+//Get interview level stats
 collapse (firstnm) n_answer n_removed  rawdur_fstcompl cleandur_fstcompl length_pause  rawdurint  (sum) sect* cleandur , by(interview__id)
 rename cleandur clean_durint
 
@@ -40,12 +40,8 @@ mmerge interview__id using "${gsdDataRaw}/KIHBS_2024_25_Pilot.dta", unmatched(no
 drop _merge 
 qui save "${gsdDataRaw}/paradata.dta", replace
 
+//Open raw questionnaire level data
 use "${gsdDataRaw}//KIHBS_2024_25_Pilot.dta",clear
-merge 1:1 interview__id using "${gsdDataRaw}//paradata.dta", nogen keep(1 3) assert(1 3) //merge metavariables from paradata analysis
-
-**# Reject submissions with errors and unanswered questions 
-sursol rejectHQ if entities__errors>=16 & !mi(entities__errors), server("https://kihbs.knbs.or.ke/kihbs") user("K1Hb5_Ap1") password("D1fFcu!t.in-G3tt1ng S0m3.d@ta") id(interview__id) comment("You have at least 1 error in your form, please recheck and complete once the screen is GREEN") //more than 1 errors trigger rejection
-sursol rejectHQ if n_questions_unanswered>=100 & !mi(n_questions_unanswered) & consented==1, server("https://kihbs.knbs.or.ke/kihbs") user("K1Hb5_Ap1") password("D1fFcu!t.in-G3tt1ng S0m3.d@ta") id(interview__id) comment("You have at least 1 unanswered field in your form, please recheck and complete once the screen is GREEN") //more than 1 unanswered question triggers rejection
 
 **# Dataset/variables preprocessing
 qui destring version, replace //Form version
@@ -53,6 +49,8 @@ keep if inlist(version,1)
 keep if !inlist(interview__status,65,125) //only retain non rejected interviews
 clonevar submissiondate=tmlstact //Submissiondate
 keep if consented==1
+
+merge 1:1 interview__id using "${gsdDataRaw}//paradata.dta", nogen keep(1 3) //merge metavariables from paradata analysis
 
 *Overall duration
 qui replace interview__duration = subinstr(interview__duration,"00.","",.)
@@ -76,12 +74,12 @@ foreach s of local sections {
 	qui gen dur_sec_`s'=(InterviewEnd_Sec`s'_stata-InterviewStart_Sec`s'_stata)/60000
 	qui replace dur_sec_`s'=. if dur_sec_`s'<0
 }
+
 egen duration_overall_sumsecs=rowtotal(dur_sec_*) 
 summ duration_overall duration_overall_sumsecs
 forval i=1/10 {
 	qui replace dur`i'=dur`i'/60
 }
-tabstat dur_sec_C sectC_dur dur3, s(median sd)
 decode A01, gen(county_name)
 clonevar ea_name=A06
 clonevar foname=responsible
@@ -90,6 +88,68 @@ egen n_fitems=rowtotal(YA03_*)
 isid hhid_str
 qui save "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", replace
 
+use "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", clear
+
+//Overall county level diagnostics
+*Clean duration
+betterbarci cleandur_min, over(A01) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
+qui graph export "${gsdOutput}/cleandur_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+*Raw duration
+betterbarci rawdur_min, over(A01) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) 
+qui graph export "${gsdOutput}/rawdur_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+*Number of answers per minute
+betterbarci answ_pm, over(A01) n format(%9.1f) bar ytitle("N. Answers") title("Interviewer productivity") subtitle("Number of answers per minute") v 
+qui graph export "${gsdOutput}/answpm_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+*Proportion of answers removed
+gen prop_removed=(n_removed/n_answer)*100
+betterbarci prop_removed, over(A01) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") v pct saving("${gsdOutput}/answrem_bycounty.gph", replace) 
+qui graph export "${gsdOutput}/answrem_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+*Proportion of of errors
+gen prop_errors=(entities__errors/n_answer)*100
+betterbarci prop_errors if entities__errors>10 & !mi(entities__errors), over(A01) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_bycounty.gph", replace) 
+qui graph export "${gsdOutput}/properrors_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+*Number of unanswered questions 
+betterbarci n_questions_unanswered if n_questions_unanswered>10 & !mi(n_questions_unanswered), over(A01) n format(%9.0f) bar title("Number of unanswered questions") v pct saving("${gsdOutput}/nunanswred_bycounty.gph", replace) 
+qui graph export "${gsdOutput}/nunanswred_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+
+//Enumerator level diagnostics, by county
+qui levelsof A01, loc(county)
+foreach c of local county {
+	*Clean duration
+	cap betterbarci cleandur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
+	cap qui graph export "${gsdOutput}/cleandur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	*Raw duration
+	cap betterbarci rawdur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) 
+	cap qui graph export "${gsdOutput}/rawdur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	*Number of answers per minute
+	cap betterbarci answ_pm if A01==`c', over(A21) n format(%9.1f) bar title("Interviewer productivity") subtitle("Number of answers per minute") v saving("${gsdOutput}/answpm_county_`c'.gph", replace) 
+	cap qui graph export "${gsdOutput}/answpm_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	*Proportion of answers removed
+	cap betterbarci prop_removed if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") v pct saving("${gsdOutput}/answrem_county_`c'.gph", replace) 
+	cap qui graph export "${gsdOutput}/answrem_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	*Proportion of of errors
+	cap betterbarci prop_errors if entities__errors>10 & !mi(entities__errors) if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_county_`c'.gph", replace) 
+	cap qui graph export "${gsdOutput}/properrors_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	*Number of unanswered questions 
+	cap betterbarci n_questions_unanswered if n_questions_unanswered>10 & !mi(n_questions_unanswered)if A01==`c', over(A21) n format(%9.0f) bar title("Number of unanswered questions") v pct saving("${gsdOutput}/nunanswred_county_`c'.gph", replace) 
+	qui graph export "${gsdOutput}/nunanswred_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace	
+}
+
+
+betterbar sectF_dur dur_sec_F if A16<10, over(A16) n format(%9.2f)
+
+betterbar sectF_dur dur_sec_F if A16<10, over(A16) n format(%9.2f)
+
+
+
+
+
+
+
+
+
+
+ex
 *Set globals for data monitoring and cleaning
 global id interview__key 
 global date submissiondate
