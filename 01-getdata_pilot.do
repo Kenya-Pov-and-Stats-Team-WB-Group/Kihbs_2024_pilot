@@ -24,6 +24,17 @@ rename cleandur clean_durint
 gen cleandur_min=clean_durint/60
 gen rawdur_min=rawdurint/60
 gen answ_pm=n_answer/cleandur_min 
+
+local sections A B C D E F G H I J K L M N O P Q R S T U V W X YA YB YD YE YF YG YH YI YK YJ YL 
+foreach s of local sections { 
+	qui gen perc_dur_sec`s'=(sect`s'_dur/cleandur_min)*100 
+}
+
+graph hbar (mean) sect*_dur , blabel(bar, size(vsmall) format(%9.2g)) bargap(25) legend(size(small)) ytitle("Minutes", size(small))  ylabel(, labsize(small))  title("Average duration by section") //sections duration (absolute)
+qui graph export "${gsdOutput}/section_duration.jpg", as(jpg) name("Graph") quality(100) replace
+
+graph hbar (mean) perc_dur_sec* , blabel(bar, size(vsmall) format(%9.2g)) bargap(25) legend(size(small)) ytitle("%", size(small))  ylabel(, labsize(small))  title("Average proportion of interview time by section") //sections duration (absolute)
+qui graph export "${gsdOutput}/section_relative_duration.jpg", as(jpg) name("Graph") quality(100) replace
 	
 lab var answ_pm "Answers per Minute"
 lab var rawdurint "Raw duration of interview in seconds between first and last action" 
@@ -160,6 +171,8 @@ restore
 merge 1:1 interview__key using `dom_tourism', keepusing(H01_hh) keep(1 3) nogen
 betterbarci sectH_dur if H01_hh==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section H | Domestic tourism") 
 qui graph export "${gsdOutput}/sec_H_dur.jpg", as(jpg) name("Graph") quality(100) replace	
+betterbarci sectH_dur if H01_hh==1 & A16<=7, over(A16) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section H | Domestic tourism") 
+qui graph export "${gsdOutput}/sec_H_dubyhhsize.jpg", as(jpg) name("Graph") quality(100) replace	
 
 // L Land ownership and tenure	L01==1
 betterbarci L01, over(A01) n  v bar title("Proportion of houshold having land") pct yscale(off)
