@@ -1,3 +1,6 @@
+clear all
+set gr off 
+
 **# Analyze paradata
 qui import delimited using "${gsdDataRaw}/paradata_all.tab", clear
 
@@ -17,8 +20,15 @@ replace sectA_dur = cleandur/60 if regexm(variable,"consen")
 replace sectYA_dur = cleandur/60 if regexm(variable,"_cons_|purch|q1_") 
 egen  nmiss =rowmiss(sectA_dur- sectYL_dur)
 br variable sectA_dur- sectYL_dur nmiss if nmiss>34
+
+//Flag fertility subsection questions in section E
+qui gen sectE_f_dur = cleandur/60 if regexm(variable,"E25|E26|E27|E28A|E28|E28B") 
+
+//Flag desth subsection questions in section E
+qui gen sectE_d_dur = cleandur/60 if regexm(variable,"E59|E60B|E60_C_1|E60_C_2|E60_D|E60_E|E61a|E61b|E61b_Other|E62|E62_Other|E63|E63_Other") 
+
 //Get interview level stats
-collapse (firstnm) n_answer n_removed  rawdur_fstcompl cleandur_fstcompl length_pause  rawdurint  (sum) sect* cleandur , by(interview__id)
+collapse (firstnm) n_answer n_removed  rawdur_fstcompl cleandur_fstcompl length_pause  rawdurint  (sum) sect* cleandur sectE_fertility_dur=sectE_f_dur sectE_deaths_dur=sectE_d_dur, by(interview__id)
 rename cleandur clean_durint
 
 gen cleandur_min=clean_durint/60
@@ -32,7 +42,6 @@ foreach s of local sections {
 
 graph hbar (mean) sect*_dur , blabel(bar, size(vsmall) format(%9.2g)) bargap(25) legend(size(small)) ytitle("Minutes", size(small))  ylabel(, labsize(small))  title("Average duration by section") //sections duration (absolute)
 qui graph export "${gsdOutput}/section_duration.jpg", as(jpg) name("Graph") quality(100) replace
-
 graph hbar (mean) perc_dur_sec* , blabel(bar, size(vsmall) format(%9.2g)) bargap(25) legend(size(small)) ytitle("%", size(small))  ylabel(, labsize(small))  title("Average proportion of interview time by section") //sections duration (absolute)
 qui graph export "${gsdOutput}/section_relative_duration.jpg", as(jpg) name("Graph") quality(100) replace
 	
@@ -63,6 +72,9 @@ keep if consented==1
 
 merge 1:1 interview__id using "${gsdDataRaw}//paradata.dta", nogen keep(1 3) //merge metavariables from paradata analysis
 
+gen prop_removed=(n_removed/n_answer)*100
+gen prop_errors=(entities__errors/n_answer)*100
+
 *Overall duration
 qui replace interview__duration = subinstr(interview__duration,"00.","",.)
 qui split interview__duration,p(":")
@@ -88,9 +100,6 @@ foreach s of local sections {
 
 egen duration_overall_sumsecs=rowtotal(dur_sec_*) 
 summ duration_overall duration_overall_sumsecs
-forval i=1/10 {
-	qui replace dur`i'=dur`i'/60
-}
 decode A01, gen(county_name)
 clonevar ea_name=A06
 clonevar foname=responsible
@@ -99,67 +108,34 @@ egen n_fitems=rowtotal(YA03_*)
 isid hhid_str
 qui save "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", replace
 
-use "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", clear
-
-gen prop_removed=(n_removed/n_answer)*100
-gen prop_errors=(entities__errors/n_answer)*100
-
-//Overall county level diagnostics
-*Clean duration
-betterbarci cleandur_min, over(A01) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
-qui graph export "${gsdOutput}/cleandur_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
-*Raw duration
-betterbarci rawdur_min, over(A01) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) 
-qui graph export "${gsdOutput}/rawdur_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
-*Number of answers per minute
-betterbarci answ_pm, over(A01) n format(%9.1f) bar ytitle("N. Answers") title("Interviewer productivity") subtitle("Number of answers per minute") v 
-qui graph export "${gsdOutput}/answpm_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
-*Proportion of answers removed
-betterbarci prop_removed, over(A01) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") v pct saving("${gsdOutput}/answrem_bycounty.gph", replace) 
-qui graph export "${gsdOutput}/answrem_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
-*Proportion of of errors
-betterbarci prop_errors if entities__errors>10 & !mi(entities__errors), over(A01) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_bycounty.gph", replace) 
-qui graph export "${gsdOutput}/properrors_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
-*Number of unanswered questions 
-betterbarci n_questions_unanswered if n_questions_unanswered>10 & !mi(n_questions_unanswered), over(A01) n format(%9.0f) bar title("Number of unanswered questions") v pct saving("${gsdOutput}/nunanswred_bycounty.gph", replace) 
-qui graph export "${gsdOutput}/nunanswred_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
-
-//Enumerator level diagnostics, by county
-set gr off
-qui levelsof A01, loc(county)
-foreach c of local county { //for each county
-	qui levelsof county_name if A01==`c', loc(cname)
-	dis in red "Create report for county "`cname'""
-
-	*Clean duration
-	betterbarci cleandur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
-	qui graph export "${gsdOutput}/cleandur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
-	*Raw duration
-	betterbarci rawdur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) 
-	qui graph export "${gsdOutput}/rawdur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
-	*Number of answers per minute
-	betterbarci answ_pm if A01==`c', over(A21) n format(%9.1f) bar title("Number of answers per minute") subtitle("By enumerator") v saving("${gsdOutput}/answpm_county_`c'.gph", replace) 
-	qui graph export "${gsdOutput}/answpm_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
-	*Proportion of answers removed
-	betterbarci prop_removed if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") subtitle("By enumerator") v pct saving("${gsdOutput}/answrem_county_`c'.gph", replace) 
-	qui graph export "${gsdOutput}/answrem_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
-	*Proportion of of errors
-	betterbarci prop_errors if  A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_county_`c'.gph", replace) 
-	qui graph export "${gsdOutput}/properrors_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
-	*Number of unanswered questions 
-	betterbarci n_questions_unanswered if  A01==`c', over(A21) n format(%9.0f) bar title("Number of unanswered questions") v pct saving("${gsdOutput}/nunanswred_county_`c'.gph", replace) 
-	qui graph export "${gsdOutput}/nunanswred_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace	
-	
-	*Create county specific workbook with diagnostics ind all pics in unit specific folder
-	preserve 
-	qui filelist, dir("${gsdOutput}/") //find graphs
-	qui keep if regexm(filename,"_county_`c'.jpg") //retain county specific graphs
-	qui gen picture=dirname+"/"+filename 
-	qui photobook picture using "${gsdTemp}/Report_county_`c'.pdf", replace linebreak(3) pagesize(A4) ncol(2) title("County `c'") border(end, single, green) //create workbook
-	restore
-}
-
 *Selected section durations
+use "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", clear 
+set gr on
+//Fertility asked to women in age range 15-49 i.e.: inrange(B05,15,49) & B04==1
+preserve 
+use "${gsdDataRaw}/household_roster.dta", clear
+gen Women_15_49=inrange(B05,15,49) & B04==1
+bys interview__key: egen Women_15_49_hh=max(Women_15_49)
+duplicates drop interview__key, force
+tempfile fertility
+qui save `fertility', replace
+restore 
+*Duration of fertility subsection for hh where it's applicable
+merge 1:1 interview__key using `fertility', keepusing(Women_15_49_hh) keep(1 3) nogen
+betterbarci sectE_fertility_dur if Women_15_49_hh==1, over(A01) n format(%9.1f) v bar ytitle("Minutes") title("Duration Section E | Fertility subsection") 
+qui graph export "${gsdOutput}/sec_E_fertility_dur.jpg", as(jpg) name("Graph") quality(100) replace	
+//Deaths
+*Proportion of health module's time spent on fertility subsection 
+gen sectE_fert_prop=sectE_fertility_dur/sectE_dur*100
+betterbarci sectE_fert_prop if Women_15_49_hh==1, over(A01) n format(%9.1f) v bar ytitle("Minutes") title("Duration Section E | Fertility subsection") 
+*Duration of deaths subsection for hh where it's applicable
+betterbarci sectE_fertility_dur if E58==1, over(A01) n format(%9.1f) v bar ytitle("Minutes") title("Duration Section E | Fertility subsection") 
+qui graph export "${gsdOutput}/sec_E_deaths_dur.jpg", as(jpg) name("Graph") quality(100) replace	
+*Proportion of health module's time spent on fertility subsection 
+gen sectE_deaths_prop=sectE_deaths_dur/sectE_dur*100 
+qui summ sectE_deaths_prop if E58==1==1, d
+betterbarci sectE_deaths_prop if E58==1==1, over(A01) n format(%9.1f) v bar ytitle("Minutes") title("Duration Section E | Deaths subsection") note("Overall: mean=`r(mean)'; median=`r(p50)'")
+
 // H Domestic tourism	H01==1
 preserve 
 use "${gsdDataRaw}/household_roster.dta", clear
@@ -226,13 +202,63 @@ betterbarci sectT_dur if T03_hh==1, over(A01) n format(%9.0f) v bar ytitle("Minu
 qui graph export "${gsdOutput}/sec_T_dur.jpg", as(jpg) name("Graph") quality(100) replace	
 
 
+//Overall county level diagnostics
+use "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", clear
 
+*Clean duration
+betterbarci cleandur_min, over(A01) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
+qui graph export "${gsdOutput}/cleandur_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+*Raw duration
+betterbarci rawdur_min, over(A01) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) 
+qui graph export "${gsdOutput}/rawdur_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+*Number of answers per minute
+betterbarci answ_pm, over(A01) n format(%9.1f) bar ytitle("N. Answers") title("Interviewer productivity") subtitle("Number of answers per minute") v 
+qui graph export "${gsdOutput}/answpm_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+*Proportion of answers removed
+betterbarci prop_removed, over(A01) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") v pct saving("${gsdOutput}/answrem_bycounty.gph", replace) 
+qui graph export "${gsdOutput}/answrem_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+*Proportion of of errors
+betterbarci prop_errors if entities__errors>10 & !mi(entities__errors), over(A01) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_bycounty.gph", replace) 
+qui graph export "${gsdOutput}/properrors_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+*Number of unanswered questions 
+betterbarci n_questions_unanswered if n_questions_unanswered>10 & !mi(n_questions_unanswered), over(A01) n format(%9.0f) bar title("Number of unanswered questions") v pct saving("${gsdOutput}/nunanswred_bycounty.gph", replace) 
+qui graph export "${gsdOutput}/nunanswred_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 
+//Enumerator level diagnostics, by county
+set gr off
+qui levelsof A01, loc(county)
+foreach c of local county { //for each county
+	qui levelsof county_name if A01==`c', loc(cname)
+	dis in red "Create report for county "`cname'""
 
-betterbar sectF_dur dur_sec_F if A16<10, over(A16) n format(%9.2f)
-betterbar sectF_dur dur_sec_F if A16<10, over(A16) n format(%9.2f)
+	*Clean duration
+	betterbarci cleandur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Active time") v saving("${gsdOutput}/cleandur_bycounty.gph", replace)
+	qui graph export "${gsdOutput}/cleandur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	*Raw duration
+	betterbarci rawdur_min if A01==`c', over(A21) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) 
+	qui graph export "${gsdOutput}/rawdur_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	*Number of answers per minute
+	betterbarci answ_pm if A01==`c', over(A21) n format(%9.1f) bar title("Number of answers per minute") subtitle("By enumerator") v saving("${gsdOutput}/answpm_county_`c'.gph", replace) 
+	qui graph export "${gsdOutput}/answpm_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	*Proportion of answers removed
+	betterbarci prop_removed if A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") subtitle("By enumerator") v pct saving("${gsdOutput}/answrem_county_`c'.gph", replace) 
+	qui graph export "${gsdOutput}/answrem_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	*Proportion of of errors
+	betterbarci prop_errors if  A01==`c', over(A21) n format(%9.1f) bar ytitle("%") title("Proportion of errors") v pct saving("${gsdOutput}/properrors_county_`c'.gph", replace) 
+	qui graph export "${gsdOutput}/properrors_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace
+	*Number of unanswered questions 
+	betterbarci n_questions_unanswered if  A01==`c', over(A21) n format(%9.0f) bar title("Number of unanswered questions") v pct saving("${gsdOutput}/nunanswred_county_`c'.gph", replace) 
+	qui graph export "${gsdOutput}/nunanswred_county_`c'.jpg", as(jpg) name("Graph") quality(100) replace	
+	
+	*Create county specific workbook with diagnostics ind all pics in unit specific folder
+	preserve 
+	qui filelist, dir("${gsdOutput}/") //find graphs
+	qui keep if regexm(filename,"_county_`c'.jpg") //retain county specific graphs
+	qui gen picture=dirname+"/"+filename 
+	qui photobook picture using "${gsdTemp}/Report_county_`c'.pdf", replace linebreak(3) pagesize(A4) ncol(2) title("County `c'") border(end, single, green) //create workbook
+	restore
+}
 
-betterbar sectF_dur dur_sec_F if A16<10, over(A16) n format(%9.2f)
 
 
 
