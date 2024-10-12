@@ -20,7 +20,7 @@
 	
 // Bring in household size
 	preserve
-		use "${gsdDataRaw}/suso/pilot/household_roster.dta", clear 
+		use "${gsdDataRaw}/household_roster.dta", clear 
 		gen hhsize = 1
 		collapse (sum) hhsize, by(interview__key)
 		tempfile hhsize
