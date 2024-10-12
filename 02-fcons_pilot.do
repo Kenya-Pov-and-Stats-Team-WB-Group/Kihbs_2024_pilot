@@ -1,5 +1,5 @@
 use "${gsdRawOutput}/pilot/KIHBS24_pilot_fooditems.dta", clear
-merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing(A16 responsible) nogen keep(3)
+merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing(A16 responsible prefill prefill_group) nogen keep(3)
 recode A01 (1/6=1) (7/9=2) (10/17=3) (18/22=4) (23/36=5) (37/40=6) (41/46=7) (47=8), gen(province)
 lab def province 1 "Coast" 2 "North-Eastern" 3 "Eastern" 4 "Central" 5 "Rift Valley" 6 "Western" 7 "Nyanza" 8 "Nairobi"
 lab val province province
@@ -14,11 +14,12 @@ replace uv=uv_p50_prov if mi(uv) & !mi(uv_p50_prov)
 replace uv=uv_p50_nat if mi(uv) & !mi(uv_p50_nat)
 mdesc uv qty_kglt_2
 gen fcons=qty_kglt_2*uv
+gen item_count = q1__1==1 | q1__2==1 | q1__3==1
 
 sort interview__id 
 br interview__id food__id qty_kglt_2 uv fcons
 encode responsible,gen(responsible1)
-gcollapse (sum) fcons (mean) A16 (first) A01 A15 province responsible1, by(interview__id)
+gcollapse (sum) fcons item_count (mean) A16 (first) A01 A15 province responsible1 prefill prefill_group, by(interview__id)
 
 *Add food away from home 
 merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing( YB03a_* YB03b_*) nogen keep(3) //bring in expenditures on food away from home
@@ -37,4 +38,55 @@ gen fcons_plus_fafh=fcons+fafh+fafh_hhm //include food away from home in the mon
 gen fcons_hh_annual=fcons_plus_fafh*((365/7)) //annual consumption value all food items consumed
 gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 
-mkdensity fcons_padq_pm if fcons_padq_pm<20000,by(A15)
+// At home food consumption only
+	gen fcons_athome_annual=fcons*((365/7)) //annual consumption value all food items consumed
+	gen fcons_athome_padq_pm=fcons_athome_annual/adq_scale/12
+	lab var fcons_athome_padq_pm "Monthly at home food conusmption - per adult equivalent"
+	
+// FAFH consumption only
+	gen fafh_annual=fafh*((365/7)) //annual consumption value all food items consumed
+	gen fafh_padq_pm=fafh_annual/adq_scale/12
+	lab var fafh_padq_pm "Monthly FAFH reported at HH level - per adult equivalent"
+
+	gen fafh_hhm_annual=fafh_hhm*((365/7)) //annual consumption value all food items consumed
+	gen fafh_hhm_padq_pm=fafh_hhm_annual/adq_scale/12
+	lab var fafh_hhm_padq_pm "Monthly FAFH reported at individual level - per adult equivalent"
+
+*mkdensity fcons_padq_pm if fcons_padq_pm<20000,by(A15)
+
+
+// Compare food expenditures and items between the 2-layer and single-layer approach
+	lab def prefill 0 "Single layer" 1 "2-layered"
+	lab val prefill prefill
+
+// number of items reported consumed, purchased, or acquired
+	ttest item_count, by(prefill)
+	betterbarci item_count, over(prefill) vertical n
+	betterbarci item_count, over(prefill) by(A15) vertical n
+
+	
+	ttest fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), by(prefill)
+	betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill) vertical n
+	betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill) by(A15) vertical n
+	
+	mkdensity fcons_athome_padq_pm if fcons_athome_padq_pm<20000,over(prefill)
+	
+// Checking incidence of household FAFH versus individual
+	lab def prefill_group 0 "Individual only" 1 "Both HH and individual"
+	lab val prefill_group prefill_group
+	// Any FAFH
+		gen any_fafh_hhm = fafh_hhm_padq_pm!=0
+		
+		ttest any_fafh_hhm, by(prefill_group)
+		betterbarci any_fafh_hhm, over(prefill_group) vertical n
+		betterbarci any_fafh_hhm, over(prefill_group) by(A15) vertical n
+		
+	// Level of FAFH expenditure reported at individual level
+		ttest fafh_hhm_padq_pm, by(prefill_group)
+		betterbarci fafh_hhm_padq_pm, over(prefill_group) vertical n
+		betterbarci fafh_hhm_padq_pm, over(prefill_group) by(A15) vertical n
+	
+	// Comparing household and individual reported FAFH
+		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1, vertical n
+		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1, over(A15) vertical n
+
