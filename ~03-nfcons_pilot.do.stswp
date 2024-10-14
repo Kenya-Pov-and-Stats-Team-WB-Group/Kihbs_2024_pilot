@@ -5,7 +5,7 @@ lab def province 1 "Coast" 2 "North-Eastern" 3 "Eastern" 4 "Central" 5 "Rift Val
 lab val province province
 
 //Combine first hand and second hand clothes
-replace nf_05=nf_05+nf_05a+nf_05b if mi(nf_05)
+replace nf_05=nf_05+nf_05a+nf_05b if mi()
 
 preserve 
 use "${gsdRawOutput}/pilot/household_roster.dta", clear 

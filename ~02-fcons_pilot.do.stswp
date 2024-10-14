@@ -64,6 +64,7 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 // OVERALL COMPARISONS (ACROSS COUNTIES)
 	// Number of items
 		betterbarci item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed or Purchased") saving("${gsdOutput}/fditem_count_bycounty.gph", replace) xlab("")
+
 		betterbarci purch_item_count cons_item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(18.5 "Consumed" 57.5 "Purchased")
 	// Share with zero items consumed
 		gen no_items_cons = cons_item_count==0
