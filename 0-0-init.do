@@ -85,6 +85,12 @@ qui capture which tabstatxls
 qui if _rc!=0 {
 	github install NicolaTommasi8/tabstatxls
 }
+* photobook
+qui capture which photobook
+qui if _rc!=0 {
+	github install PovertyAction/photobook
+}
+
 macro list
 
 *If needed, install the directories and packages used in the process

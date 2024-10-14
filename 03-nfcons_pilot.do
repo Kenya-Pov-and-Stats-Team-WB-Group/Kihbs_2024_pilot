@@ -1,5 +1,5 @@
 use "${gsdRawOutput}/pilot/KIHBS24_pilot_nfooditems.dta", clear
-merge m:1 interview__id using "${gsdDataRaw}/suso/pilot/KIHBS_2024_pilot_completed.dta", keepusing(A16 responsible) nogen keep(3)
+merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing(A16 responsible) nogen keep(3)
 recode A01 (1/6=1) (7/9=2) (10/17=3) (18/22=4) (23/36=5) (37/40=6) (41/46=7) (47=8), gen(province)
 lab def province 1 "Coast" 2 "North-Eastern" 3 "Eastern" 4 "Central" 5 "Rift Valley" 6 "Western" 7 "Nyanza" 8 "Nairobi"
 lab val province province
