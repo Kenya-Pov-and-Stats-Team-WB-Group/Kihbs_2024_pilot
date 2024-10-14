@@ -33,7 +33,10 @@ else if (inlist("${suser}","User")) {
 else if (inlist("${suser}","User")) {
 	local swdLocal = "C:\Github\KIHBS_2024"
 }
-
+*Dennis 
+else if (inlist("${suser}","User")) {
+	local swdLocal = "D:\KIHBS 24_2025\"
+}
 else {
 	di as error "Configure work environment in init.do before running the code."
 	error 1
@@ -85,12 +88,6 @@ qui capture which tabstatxls
 qui if _rc!=0 {
 	github install NicolaTommasi8/tabstatxls
 }
-* photobook
-qui capture which photobook
-qui if _rc!=0 {
-	github install PovertyAction/photobook
-}
-
 macro list
 
 *If needed, install the directories and packages used in the process

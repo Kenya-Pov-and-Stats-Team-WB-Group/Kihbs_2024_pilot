@@ -82,6 +82,8 @@ qui destring version, replace //Form version
 keep if inlist(version,1)
 keep if !inlist(interview__status,65,125) //only retain non rejected interviews
 clonevar submissiondate=tmlstact //Submissiondate
+betterbarci consented, over(A01) n  v bar title("Consent rate") pct yscale(off)
+qui graph export "${gsdOutput}/consent_rate_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 keep if consented==1
 
 merge 1:1 interview__id using "${gsdDataRaw}//paradata.dta", nogen keep(1 3) //merge metavariables from paradata analysis
