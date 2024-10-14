@@ -15,8 +15,8 @@ replace uv=uv_p50_nat if mi(uv) & !mi(uv_p50_nat)
 mdesc uv qty_kglt_2
 gen fcons=qty_kglt_2*uv
 gen item_count = q1__1==1 | q1__2==1
-gen cons_item_count = q1__1==1
-gen purch_item_count = q1__2==1
+gen cons_item_count = q1__2==1
+gen purch_item_count = q1__1==1
 
 sort interview__id 
 br interview__id food__id qty_kglt_2 uv fcons
@@ -63,16 +63,23 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 
 // OVERALL COMPARISONS (ACROSS COUNTIES)
 	// Number of items
-		betterbarci item_count, over(A01) n v
-		betterbarci cons_item_count purch_item_count, over(A01) n v
+		betterbarci item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed or Purchased") saving("${gsdOutput}/fditem_count_bycounty.gph", replace) xlab("")
+		
+		set trace on
+		betterbarci purch_item_count cons_item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(18.5 "Consumed" 57.5 "Purchased")
+		set trace off
 	// Share with zero items consumed
 		gen no_items_cons = cons_item_count==0
-		betterbarci no_items_cons, over(A01) n v		
+		log using "C:\Users\WB426252\OneDrive - WBG\WB - Kenya"
+		set trace on
+		betterbarci no_items_cons, over(A01) n v bar ytitle("Share of households") pct title("Households with zero food items consumed") saving("${gsdOutput}/sh_nofood_bycounty.gph", replace) xlab("")
+		log close
+		set trace off
 	// Consumption expenditure
-		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(A01) vertical n
+		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(A01) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Value per AdEq") title("Monthly At-home Consumption Value per AdEq")  saving("${gsdOutput}/fcons_athome_padq_pm_bycounty.gph", replace)
+		betterbarci fcons_padq_pm if inrange(fcons_padq_pm,1,75000), over(A01) vertical n c format(%9.0f) bar ytitle("Monthly Food Consumption Value per AdEq") title("Monthly Food Consumption Value per AdEq")  saving("${gsdOutput}/fcons_athome_padq_pm_bycounty.gph", replace)
 	// Calories
-		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000 & total_kcal_pp_pd!=0, over(A01) vertical n
-		
+		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000 & total_kcal_pp_pd!=0, over(A01) vertical n bar format(%9.0f) bar ytitle("Calories per person per day") title("Calories per person per day")  saving("${gsdOutput}/kcal_pp_pd_bycounty.gph", replace) xlab("")
 	
 
 // Compare food expenditures and items between the 2-layer and single-layer approach
@@ -80,8 +87,8 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 	lab val prefill prefill
 
 // number of items reported consumed, purchased, or acquired
-	ttest item_count, by(prefill)
-	betterbarci item_count, over(prefill) vertical n
+	ttest item_count, by(prefill) 
+	betterbarci item_count, over(prefill) vertical n format(%9.0f) bar 
 	betterbarci item_count, over(prefill) by(A15) vertical n
 	betterbarci item_count, over(prefill) by(A01) n
 	
