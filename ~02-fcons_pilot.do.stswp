@@ -64,16 +64,15 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 // OVERALL COMPARISONS (ACROSS COUNTIES)
 	// Number of items
 		betterbarci item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed or Purchased") saving("${gsdOutput}/fditem_count_bycounty.gph", replace) xlab("")
-
 		betterbarci purch_item_count cons_item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(18.5 "Consumed" 57.5 "Purchased")
 	// Share with zero items consumed
 		gen no_items_cons = cons_item_count==0
 		betterbarci no_items_cons, over(A01) n v bar ytitle("Share of households") pct title("Households with zero food items consumed") saving("${gsdOutput}/sh_nofood_bycounty.gph", replace) xlab("")
 	// Consumption expenditure
 		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(A01) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Value per AdEq") title("Monthly At-home Consumption Value per AdEq")  saving("${gsdOutput}/fcons_athome_padq_pm_bycounty.gph", replace)
-		betterbarci fcons_padq_pm if inrange(fcons_padq_pm,1,75000), over(A01) vertical n c format(%9.0f) bar ytitle("Monthly Food Consumption Value per AdEq") title("Monthly Food Consumption Value per AdEq")  saving("${gsdOutput}/fcons_athome_padq_pm_bycounty.gph", replace)
+		betterbarci fcons_padq_pm if inrange(fcons_padq_pm,1,75000), over(A01) vertical n  format(%9.0f) bar ytitle("Monthly Food Consumption Value per AdEq") title("Monthly Food Consumption Value per AdEq")  saving("${gsdOutput}/fcons_athome_padq_pm_bycounty.gph", replace) xlab("")
 	// Calories
-		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000 & total_kcal_pp_pd!=0, over(A01) vertical n bar format(%9.0f) bar ytitle("Calories per person per day") title("Calories per person per day")  saving("${gsdOutput}/kcal_pp_pd_bycounty.gph", replace) xlab("")
+		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000 & total_kcal_pp_pd!=0, over(A01) vertical n format(%9.0f) bar ytitle("Calories per person per day") title("Calories per person per day")  saving("${gsdOutput}/kcal_pp_pd_bycounty.gph", replace) xlab("")
 	
 
 // Compare food expenditures and items between the 2-layer and single-layer approach
@@ -84,7 +83,7 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 	ttest item_count, by(prefill) 
 	betterbarci item_count, over(prefill) vertical n format(%9.0f) bar 
 	betterbarci item_count, over(prefill) by(A15) vertical n
-	betterbarci item_count, over(prefill) by(A01) n
+	betterbarci item_count, over(prefill) by(A01) n title("No. of items reported consumed") subtitle("By 2 layered vs one a")
 	
 	ttest fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), by(prefill)
 	betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill) vertical n
@@ -99,8 +98,8 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 		gen any_fafh_hhm = fafh_hhm_padq_pm!=0
 		
 		ttest any_fafh_hhm, by(prefill_group)
-		betterbarci any_fafh_hhm, over(prefill_group) vertical n
-		betterbarci any_fafh_hhm, over(prefill_group) by(A15) vertical n
+		betterbarci any_fafh_hhm, over(prefill_group) vertical n xlab("")
+		betterbarci any_fafh_hhm, over(prefill_group) by(A15) vertical n xlab("")
 		
 	// How many members report FAFH
 		ttest num_FAFH, by(prefill_group)
