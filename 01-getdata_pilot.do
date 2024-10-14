@@ -51,7 +51,7 @@ local sections A B C D E F G H I J K L M N O P Q R S T U V W X YA YB YD YE YF YG
 foreach s of local sections { 
 	qui gen perc_dur_sec`s'=(sect`s'_dur/cleandur_min)*100 
 	qui gen answ_pm_sect`s'= n_answers_sect`s'/sect`s'_dur
-	lab var answ_pm_sect`s' "S `s'"
+	lab var answ_pm_sect`s' "`s'"
 }
 
 graph hbar (mean) sect*_dur , blabel(bar, size(vsmall) format(%9.2g)) bargap(25) legend(size(small)) ytitle("Minutes", size(small))  ylabel(, labsize(small))  title("Average duration by section") //sections duration (absolute)
@@ -93,7 +93,8 @@ gen prop_errors=(entities__errors/n_answer)*100
 qui outdetect answ_pm_sectS,best replace force
 bys A01: egen mean_apmS=mean(answ_pm_sectS)
 replace answ_pm_sectS=mean_apmS if inlist(_out,1,2)
-betterbarci answ_pm_sect*,  n format(%9.1f) bar title("Answers per minute") xlab("")
+betterbarci answ_pm_sect*,  n format(%9.1f) bar title("Answers per minute") subtitle("By section") xlab("")
+qui graph export "${gsdOutput}/answers_perminute_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 
 *Overall duration
 qui replace interview__duration = subinstr(interview__duration,"00.","",.)
