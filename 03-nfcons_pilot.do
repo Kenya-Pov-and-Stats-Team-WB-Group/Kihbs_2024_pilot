@@ -18,6 +18,10 @@ gen nf_expense=(a*((365/7)))/12 if recall==1 //for weekly recall, annualize firs
 replace nf_expense=a if recall==2 //monthly records are already ok
 replace nf_expense=a/6 if recall==3 //6 months recall bring to monthly
 replace nf_expense=a/12 if recall==4 //12 months recall bring to monthly
+egen outlier_nat=outside(nf_expense), by(nf__expenses__id ) factor(1.5)
+egen outlier_cty=outside(nf_expense), by( A01 nf__expenses__id ) factor(1.5)
+
+fre nf__expenses__id if !mi(outlier_nat), des 
 
 encode responsible,gen(responsible1)
 gcollapse (sum) nf_expense (mean) A16 (first) adq_scale A01 A15 province responsible1, by(interview__id)
