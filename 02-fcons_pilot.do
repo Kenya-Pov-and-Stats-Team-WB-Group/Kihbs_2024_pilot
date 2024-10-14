@@ -14,12 +14,14 @@ replace uv=uv_p50_prov if mi(uv) & !mi(uv_p50_prov)
 replace uv=uv_p50_nat if mi(uv) & !mi(uv_p50_nat)
 mdesc uv qty_kglt_2
 gen fcons=qty_kglt_2*uv
-gen item_count = q1__1==1 | q1__2==1 | q1__3==1
+gen item_count = q1__1==1 | q1__2==1
+gen cons_item_count = q1__1==1
+gen purch_item_count = q1__2==1
 
 sort interview__id 
 br interview__id food__id qty_kglt_2 uv fcons
 encode responsible,gen(responsible1)
-gcollapse (sum) fcons item_count (mean) A16 (first) A01 A15 province responsible1 prefill prefill_group, by(interview__id)
+gcollapse (sum) fcons *item_count (mean) A16 (first) A01 A15 province responsible1 prefill prefill_group total_kcal_pp_pd, by(interview__id)
 
 *Add food away from home 
 merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing( YB03a_* YB03b_*) nogen keep(3) //bring in expenditures on food away from home
@@ -27,11 +29,15 @@ egen fafh=rowtotal(YB03a_* YB03b_*)
 *Add adult equivalent scale and food expenses for hh members 
 preserve 
 use "${gsdRawOutput}/pilot/household_roster.dta", clear 
+	// Get number of household members that consumed FAFH
+		egen any_fafh = rowtotal(YB__*)
+		egen num_FAFH = sum(any_fafh>0), by(interview__id)
+		lab var num_FAFH "# of household membmers that consumed any FAFH"
 duplicates drop interview__id, force
 tempfile hhm 
 qui save `hhm'
 restore 
-merge 1:1 interview__id using `hhm', keepusing(adq_scale fafh_hhm) nogen keep(3)
+merge 1:1 interview__id using `hhm', keepusing(adq_scale fafh_hhm num_FAFH) nogen keep(3)
 
 gen fcons_plus_fafh=fcons+fafh+fafh_hhm //include food away from home in the monthly per person consumption aggregate
 
@@ -55,6 +61,20 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 *mkdensity fcons_padq_pm if fcons_padq_pm<20000,by(A15)
 
 
+// OVERALL COMPARISONS (ACROSS COUNTIES)
+	// Number of items
+		betterbarci item_count, over(A01) n v
+		betterbarci cons_item_count purch_item_count, over(A01) n v
+	// Share with zero items consumed
+		gen no_items_cons = cons_item_count==0
+		betterbarci no_items_cons, over(A01) n v		
+	// Consumption expenditure
+		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(A01) vertical n
+	// Calories
+		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000 & total_kcal_pp_pd!=0, over(A01) vertical n
+		
+	
+
 // Compare food expenditures and items between the 2-layer and single-layer approach
 	lab def prefill 0 "Single layer" 1 "2-layered"
 	lab val prefill prefill
@@ -63,7 +83,7 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 	ttest item_count, by(prefill)
 	betterbarci item_count, over(prefill) vertical n
 	betterbarci item_count, over(prefill) by(A15) vertical n
-
+	betterbarci item_count, over(prefill) by(A01) n
 	
 	ttest fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), by(prefill)
 	betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill) vertical n
@@ -81,12 +101,22 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 		betterbarci any_fafh_hhm, over(prefill_group) vertical n
 		betterbarci any_fafh_hhm, over(prefill_group) by(A15) vertical n
 		
+	// How many members report FAFH
+		ttest num_FAFH, by(prefill_group)
+		betterbarci num_FAFH, over(prefill_group) vertical n
+		betterbarci num_FAFH, over(prefill_group) by(A15) vertical n		
+		
 	// Level of FAFH expenditure reported at individual level
 		ttest fafh_hhm_padq_pm, by(prefill_group)
 		betterbarci fafh_hhm_padq_pm, over(prefill_group) vertical n
 		betterbarci fafh_hhm_padq_pm, over(prefill_group) by(A15) vertical n
 	
 	// Comparing household and individual reported FAFH
-		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1, vertical n
-		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1, over(A15) vertical n
-
+		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1,vertical n
+		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1, over(A15) vertical n
+		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1 & A16<10 & fafh_hhm_padq_pm<10000, over(A16) vertical n
+		
+	// Any impact on at home conusmption (just out of curiosity)
+		ttest fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), by(prefill_group)
+		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill_group) vertical n
+		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill_group) by(A15) vertical n
