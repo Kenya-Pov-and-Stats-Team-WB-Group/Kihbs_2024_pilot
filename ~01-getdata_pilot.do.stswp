@@ -51,7 +51,7 @@ local sections A B C D E F G H I J K L M N O P Q R S T U V W X YA YB YD YE YF YG
 foreach s of local sections { 
 	qui gen perc_dur_sec`s'=(sect`s'_dur/cleandur_min)*100 
 	qui gen answ_pm_sect`s'= n_answers_sect`s'/sect`s'_dur
-	lab var answ_pm_sect`s' "S `s'"
+	lab var answ_pm_sect`s' "`s'"
 }
 
 graph hbar (mean) sect*_dur , blabel(bar, size(vsmall) format(%9.2g)) bargap(25) legend(size(small)) ytitle("Minutes", size(small))  ylabel(, labsize(small))  title("Average duration by section") //sections duration (absolute)
@@ -352,6 +352,38 @@ tabstatxls duration_overall	dur_sec_A	dur_sec_B	dur_sec_C	rejections__sup	reject
 local foodtas cereals meat oil_fats fruits veges sugars alcohtobac //for each food category dataset 
 foreach f of local foodtas {
 	use "${gsdDataRaw}//`f'.dta",clear //open dta
+		// Establish province
+			recode A01 (1/6 = 1)(7/9 = 2)(10/17 = 3)(18/22 = 4)(23/36 = 5)(37/40 = 6)(41/46 = 7)(47=8), gen(prov)
+		// Bring in conversion factors
+			preserve
+				if "`f'" == "alcohtobac" {
+					import delimited "${gsdDataRaw}//alcohol_convfactors.txt", clear // Special case due to inconsistent naming
+				}
+				else {
+					import delimited "${gsdDataRaw}//`f'_convfactors.txt", clear
+				}
+				clonevar rowcode_p = rowcode
+				clonevar rowcode_c = rowcode
+				tempfile cfs
+				save `cfs'
+			restore
+		ren rowcode_*_p rowcode_p
+		ren rowcode_*_c rowcode_c
+		merge m:1 rowcode_p using `cfs', keep(match master) keepusing(rowcode_p conv_*) nogen
+		// Apply relevant conversion factors
+			forvalues p = 1/7 {
+				qui replace qty_kglt_1_`f' = q3_purch_qty_`f'*conv_prov`p' if prov==`p'
+			}
+			replace unit_value = q3_purch_cost_`f'/qty_kglt_1_`f'
+		// Now for consumption
+			drop conv_*
+			merge m:1 rowcode_c using `cfs', keep(match master) keepusing(rowcode_c conv_*) nogen
+			// Apply relevant conversion factors
+				forvalues p = 1/7 {
+					qui replace qty_kglt_2_`f' = q3_cons_qty_tot_`f'*conv_prov`p' if prov==`p'
+				}
+				replace tot_kcal_cons_`f'_fi = qty_kglt_2_`f'*10*calories_coeff_`f'
+				drop prov conv*
 	*Store the value labels for 2 variables that need a single value label
 	decode q2_purch_unit_`f',gen(q2_purch_unit_`f'_s) //convert to string the label
 	decode q3_cons_unit_tot_`f',gen(q3_cons_unit_tot_`f'_s)	//convert to string the label
