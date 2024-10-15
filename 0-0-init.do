@@ -35,6 +35,10 @@ cap confirmdir "C:\Users\KNBS\OneDrive - Kenya National Bureau of Statisitics\KI
 if _rc==0 {
 local swdLocal = "C:\Users\KNBS\OneDrive - Kenya National Bureau of Statisitics\KIHBS_Pilot"
 }
+*Samoei
+else if (inlist("${suser}","USER")) {
+local swdLocal = "C:\Users\USER\OneDrive - Kenya National Bureau of Statisitics\KIHBS24\2024_KIHBS_Pilot"
+}
 *Denis
 cap confirmdir "D:\KIHBS 24_2025\"
 if _rc==0 {
