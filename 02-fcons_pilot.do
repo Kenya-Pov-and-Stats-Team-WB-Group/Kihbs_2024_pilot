@@ -73,22 +73,31 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 		betterbarci fcons_padq_pm if inrange(fcons_padq_pm,1,75000), over(A01) vertical n  format(%9.0f) bar ytitle("Monthly Food Consumption Value per AdEq") title("Monthly Food Consumption Value per AdEq")  saving("${gsdOutput}/fcons_athome_padq_pm_bycounty.gph", replace) xlab("")
 	// Calories
 		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000 & total_kcal_pp_pd!=0, over(A01) vertical n format(%9.0f) bar ytitle("Calories per person per day") title("Calories per person per day")  saving("${gsdOutput}/kcal_pp_pd_bycounty.gph", replace) xlab("")
+		// Include zeros
+			betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000, over(A01) vertical n format(%9.0f) bar ytitle("Calories per person per day") title("Calories per person per day") subtitle("Including zero calories") saving("${gsdOutput}/kcal_pp_pd_wzeros_bycounty.gph", replace) xlab("")
 	
 
 // Compare food expenditures and items between the 2-layer and single-layer approach
 	lab def prefill 0 "Single layer" 1 "2-layered"
 	lab val prefill prefill
 
-// number of items reported consumed, purchased, or acquired
-	ttest item_count, by(prefill) 
-	betterbarci item_count, over(prefill) vertical n format(%9.0f) bar 
-	betterbarci item_count, over(prefill) by(A15) vertical n
-	betterbarci item_count, over(prefill) by(A01) n title("No. of items reported consumed") subtitle("By 2 layered vs one layered approach")
+	// number of items reported consumed, purchased, or acquired
+		ttest item_count, by(prefill) 
+		// Consumed or purchased
+			betterbarci item_count, over(prefill) vertical n format(%9.0f) bar ytitle("# of food items") title("# of Food Items by Layered Approach") subtitle("Consumed or Purchased") saving("${gsdOutput}/fditem_count_by2layer.gph", replace) xlab("")	
+			// Urban Rural
+				betterbarci item_count, over(prefill) by(A15) vertical n format(%9.0f) bar ytitle("# of food items") title("# of Food Items by Layered Approach") subtitle("by Urban/Rural") saving("${gsdOutput}/fditem_count_by2layer_urban_rual.gph", replace) xlab(3.5 "Rural" 12.5 "Urban")
+		// Consumption vs purchased
+			betterbarci purch_item_count cons_i	tem_count, over(prefill) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items by Layered Approach") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(3.5 "Consumed" 12.5 "Purchased")
+		// Share with zero items consumed
+			betterbarci no_items_cons, over(prefill) n v bar ytitle("Share of households") pct title("Households with zero food items consumed") subtitle("By Layered Approach") saving("${gsdOutput}/sh_nofood_by2layer.gph", replace) xlab("")
 	
-	ttest fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), by(prefill)
-	betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill) vertical n
-	betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill) by(A15) vertical n
-	
+	// At home expenditures
+		ttest fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), by(prefill)
+		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(prefill) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Value per AdEq") title("Monthly At-home Consumption Value per AdEq")  xlab("") saving("${gsdOutput}/fcons_athome_padq_pm_by2layer.gph", replace)
+		// Urban Rural
+		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(prefill) by(A15) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Value per AdEq") title("Monthly At-home Consumption Value per AdEq") xlab(3.5 "Rural" 12.5 "Urban") saving("${gsdOutput}/fcons_athome_padq_pm_by2layer_rururb.gph", replace)
+		
 	mkdensity fcons_athome_padq_pm if fcons_athome_padq_pm<20000,over(prefill)
 	
 // Checking incidence of household FAFH versus individual
