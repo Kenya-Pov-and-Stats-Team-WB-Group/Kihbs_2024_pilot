@@ -88,7 +88,7 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 			// Urban Rural
 				betterbarci item_count, over(prefill) by(A15) vertical n format(%9.0f) bar ytitle("# of food items") title("# of Food Items by Layered Approach") subtitle("by Urban/Rural") saving("${gsdOutput}/fditem_count_by2layer_urban_rual.gph", replace) xlab(3.5 "Rural" 12.5 "Urban")
 		// Consumption vs purchased
-			betterbarci purch_item_count cons_item_count, over(prefill) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items by Layered Approach") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(3.5 "Consumed" 12.5 "Purchased")
+			betterbarci purch_item_count cons_i tem_count, over(prefill) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items by Layered Approach") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(3.5 "Consumed" 12.5 "Purchased")
 		// Share with zero items consumed
 			betterbarci no_items_cons, over(prefill) n v bar ytitle("Share of households") pct title("Households with zero food items consumed") subtitle("By Layered Approach") saving("${gsdOutput}/sh_nofood_by2layer.gph", replace) xlab("")
 	

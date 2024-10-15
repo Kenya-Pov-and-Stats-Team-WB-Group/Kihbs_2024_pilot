@@ -27,15 +27,24 @@ else if (inlist("${suser}","wb412495", "WB412495")) {
 }
 *Magara
 else if (inlist("${suser}","User")) {
-	local swdLocal = "C:\Github\KIHBS_2024"
+local swdLocal = "C:\Kihbs_2024_pilot\Kihbs_2024_pilot"
 }
 *Pius
 else if (inlist("${suser}","User")) {
 	local swdLocal = "C:\Github\KIHBS_2024"
 }
 *Dennis 
+confirmdir  "`swdLocal'/Data"
 else if (inlist("${suser}","User")) {
 	local swdLocal = "D:\KIHBS 24_2025\"
+}
+*Katra 
+else if (inlist("${suser}","KNBS")) {
+	local swdLocal = "C:\Users\KNBS\Documents\Research & Development\2024_25 KIHBS\"
+}
+*Yvonne
+else if (inlist("${suser}","Yvoche")) {
+local swdLocal = "C:\Users\Yvoche\Desktop\KihbsPilot"
 }
 else {
 	di as error "Configure work environment in init.do before running the code."
@@ -52,7 +61,7 @@ global gsdQuestionnaire = "`swdLocal'/Questionnaire"
 global gsdDocuments = "`swdLocal'/Documents"
 
 *if needed install the necessary commands
-local commands = "filelist fs matchit freqindex savesome mdesc distinct fre outdetect gtools confirmdir ralpha missings egenmore betterbar mkdensity"
+local commands = "filelist fs matchit freqindex savesome mdesc distinct fre outdetect gtools confirmdir ralpha missings betterbar mkdensity mmerge"
 foreach c of local commands {
 	qui capture which `c'
 	qui if _rc!=0 {
@@ -88,6 +97,11 @@ qui capture which tabstatxls
 qui if _rc!=0 {
 	github install NicolaTommasi8/tabstatxls
 }
+*Photobook
+qui capture which photobook
+qui if _rc!=0 {
+	net install photobook, from("https://raw.githubusercontent.com/PovertyAction/photobook/master") replace 
+}	
 macro list
 
 *If needed, install the directories and packages used in the process
