@@ -31,9 +31,9 @@ if _rc==0 {
 local swdLocal = "C:\Github\KIHBS_2024"
 }
 *Pius
-cap confirmdir "C:\Github\KIHBS_2024"
+cap confirmdir "C:\Users\KNBS\OneDrive - Kenya National Bureau of Statisitics\KIHBS_Pilot"
 if _rc==0 {
-local swdLocal = "C:\Github\KIHBS_2024"
+local swdLocal = "C:\Users\KNBS\OneDrive - Kenya National Bureau of Statisitics\KIHBS_Pilot"
 }
 *Denis
 cap confirmdir "D:\KIHBS 24_2025\"
