@@ -32,7 +32,8 @@ use "${gsdRawOutput}/pilot/household_roster.dta", clear
 	// Get number of household members that consumed FAFH
 		egen any_fafh = rowtotal(YB__*)
 		egen num_FAFH = sum(any_fafh>0), by(interview__id)
-		lab var num_FAFH "# of household membmers that consumed any FAFH"
+		lab var num_FAFH "# of household members that consumed any FAFH"
+		lab var any_fafh "Flag for hh that have any FAFH expenditures (member level only)"
 duplicates drop interview__id, force
 tempfile hhm 
 qui save `hhm'
@@ -47,15 +48,18 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 // At home food consumption only
 	gen fcons_athome_annual=fcons*((365/7)) //annual consumption value all food items consumed
 	gen fcons_athome_padq_pm=fcons_athome_annual/adq_scale/12
+	lab var fcons_athome_annual "Annual total at home food conusmption"
 	lab var fcons_athome_padq_pm "Monthly at home food conusmption - per adult equivalent"
 	
 // FAFH consumption only
 	gen fafh_annual=fafh*((365/7)) //annual consumption value all food items consumed
 	gen fafh_padq_pm=fafh_annual/adq_scale/12
+	lab var fafh_annual "Annual total FAFH reported at HH level"
 	lab var fafh_padq_pm "Monthly FAFH reported at HH level - per adult equivalent"
 
 	gen fafh_hhm_annual=fafh_hhm*((365/7)) //annual consumption value all food items consumed
 	gen fafh_hhm_padq_pm=fafh_hhm_annual/adq_scale/12
+	lab var fafh_hhm_annual "Annual total FAFH reported at individual level"
 	lab var fafh_hhm_padq_pm "Monthly FAFH reported at individual level - per adult equivalent"
 
 *mkdensity fcons_padq_pm if fcons_padq_pm<20000,by(A15)
@@ -67,6 +71,7 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 		betterbarci purch_item_count cons_item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(18.5 "Consumed" 57.5 "Purchased")
 	// Share with zero items consumed
 		gen no_items_cons = cons_item_count==0
+		lab var no_items_cons "Household has zero food items consumed (at home)"
 		betterbarci no_items_cons, over(A01) n v bar ytitle("Share of households") pct title("Households with zero food items consumed") saving("${gsdOutput}/sh_nofood_bycounty.gph", replace) xlab("")
 	// Consumption expenditure
 		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(A01) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Value per AdEq") title("Monthly At-home Consumption Value per AdEq")  saving("${gsdOutput}/fcons_athome_padq_pm_bycounty.gph", replace)
@@ -105,27 +110,33 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 	lab val prefill_group prefill_group
 	// Any FAFH
 		gen any_fafh_hhm = fafh_hhm_padq_pm!=0
+		lab var any_fafh_hhm "Household has any FAFH from member level"
 		
 		ttest any_fafh_hhm, by(prefill_group)
-		betterbarci any_fafh_hhm, over(prefill_group) vertical n xlab("")
-		betterbarci any_fafh_hhm, over(prefill_group) by(A15) vertical n xlab("")
+		betterbarci any_fafh_hhm, over(prefill_group) n v bar ytitle("Share of households") pct title("Households with any FAFH at member level") subtitle("By Approach") saving("${gsdOutput}/sh_anyfafh_byapproach.gph", replace) xlab("")
+		betterbarci any_fafh_hhm, over(prefill_group) by(A15) n v bar ytitle("Share of households") pct title("Households with any FAFH at member level") subtitle("By Approach") saving("${gsdOutput}/sh_anyfafh_byapproach_urbrur.gph", replace) 
 		
 	// How many members report FAFH
 		ttest num_FAFH, by(prefill_group)
-		betterbarci num_FAFH, over(prefill_group) vertical n
-		betterbarci num_FAFH, over(prefill_group) by(A15) vertical n		
+		betterbarci num_FAFH, over(prefill_group) v n format(%9.2f) bar ytitle("# of HH members") title("# of HH members reporting any FAFH") subtitle("By approach") saving("${gsdOutput}/nummem_fafh_byappraoch.gph", replace)
+		betterbarci num_FAFH, over(prefill_group) by(A15) v n format(%9.2f) bar ytitle("# of HH members") title("# of HH members reporting any FAFH") subtitle("By approach and urban rural") saving("${gsdOutput}/nummem_fafh_byappraoch.gph", replace) xlab(3.5 "Rural" 12.5 "Urban")		
 		
 	// Level of FAFH expenditure reported at individual level
 		ttest fafh_hhm_padq_pm, by(prefill_group)
-		betterbarci fafh_hhm_padq_pm, over(prefill_group) vertical n
-		betterbarci fafh_hhm_padq_pm, over(prefill_group) by(A15) vertical n
+		betterbarci fafh_hhm_padq_pm, over(prefill_group) v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("From HH Member Version") saving("${gsdOutput}/fafh_exp_member_byappraoch.gph", replace) xlab("")		
+		betterbarci fafh_hhm_padq_pm, over(prefill_group) by(A15) v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("From HH Member Version") saving("${gsdOutput}/fafh_exp_member_byappraoch_urbrur.gph", replace) xlab(3.5 "Rural" 12.5 "Urban")		
 	
 	// Comparing household and individual reported FAFH
-		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1,vertical n
-		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1, over(A15) vertical n
-		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1 & A16<10 & fafh_hhm_padq_pm<10000, over(A16) vertical n
+		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1, v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("HH vs Member version") saving("${gsdOutput}/fafh_exp_member_v_hh.gph", replace) xlab(2 "HH Level" 8 "Member level")	
+		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1, over(A15) v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("HH vs Member version") saving("${gsdOutput}/fafh_exp_member_v_hh_yurbrur.gph", replace) xlab(3.5 "HH Level" 12.5 "Member level")	
+		*betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1 & A16<10 & fafh_hhm_padq_pm<10000, over(A16) vertical n
 		
 	// Any impact on at home conusmption (just out of curiosity)
-		ttest fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), by(prefill_group)
+		/*ttest fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), by(prefill_group)
 		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill_group) vertical n
 		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill_group) by(A15) vertical n
+		*/
+		
+		
+// Save version of processed consumption data
+	save "${gsdRawOutput}/pilot/KIHBS24_pilot_foodcons.dta", replace
