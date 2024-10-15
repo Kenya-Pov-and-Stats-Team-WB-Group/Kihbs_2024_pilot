@@ -26,21 +26,22 @@ else if (inlist("${suser}","wb412495", "WB412495")) {
 	local swdLocal = "C:\Users\WB412495\OneDrive - WBG\KIHBS_2024_Pilot"	
 }
 *Magara
-else if (inlist("${suser}","User")) {
-local swdLocal = "C:\Kihbs_2024_pilot\Kihbs_2024_pilot"
+cap confirmdir "C:\Github\KIHBS_2024"
+if _rc==0 {
+local swdLocal = "C:\Github\KIHBS_2024"
 }
 *Pius
-else if (inlist("${suser}","User")) {
-	local swdLocal = "C:\Github\KIHBS_2024"
+cap confirmdir "C:\Github\KIHBS_2024"
+if _rc==0 {
+local swdLocal = "C:\Github\KIHBS_2024"
 }
-*Dennis 
-confirmdir  "`swdLocal'/Data"
-else if (inlist("${suser}","User")) {
-	local swdLocal = "D:\KIHBS 24_2025\"
-}
-*Katra 
+*Denis
+cap confirmdir "D:\KIHBS 24_2025\"
+if _rc==0 {
+local swdLocal = "D:\KIHBS 24_2025\"
+}*Katra 
 else if (inlist("${suser}","KNBS")) {
-	local swdLocal = "C:\Users\KNBS\Documents\Research & Development\2024_25 KIHBS\Kihbs_2024_pilot"
+	local swdLocal = "C:\Users\KNBS\Documents\Research & Development\2024_25 KIHBS\"
 }
 *Yvonne
 else if (inlist("${suser}","Yvoche")) {
