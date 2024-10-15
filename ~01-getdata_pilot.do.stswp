@@ -82,9 +82,33 @@ qui destring version, replace //Form version
 keep if inlist(version,1)
 keep if !inlist(interview__status,65,125) //only retain non rejected interviews
 clonevar submissiondate=tmlstact //Submissiondate
-betterbarci consented, over(A01) n  v bar title("Consent rate") pct yscale(off) xlab("")
+//betterbarci consented, over(A01) n  v bar title("Consent rate") pct yscale(off) xlab("")
 qui graph export "${gsdOutput}/consent_rate_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 keep if consented==1
+
+*Code for accurately auto-rejecting interviews with validation errors
+preserve 
+use "${gsdDataRaw}/interview__errors.dta", clear 
+gen true_error=!regexm(variable,"YA03_alcohtob|_purch_cost_")
+gen error="Variables with error: "
+qui levelsof interview__key,loc(household)
+foreach h of local household {
+	qui levelsof variable if interview__key=="`h'" & true_error==1, loc(errors)
+	foreach e of local errors {
+		qui replace error=error+"`e' ;  " if interview__key=="`h'"
+	}
+}
+br variable true_error
+collapse (firstnm) error (mean) true_error,by(interview__key interview__id)
+gen to_reject=true_error>0
+drop true_error
+tempfile error_rejections 
+qui save `error_rejections', replace
+restore 
+* Reject submissions with errors and unanswered questions
+merge 1:1 interview__id using `error_rejections', keep(1 3) nogen keepusing(to_reject)
+sursol rejectHQ if entities__errors>=1000000000 & !mi(entities__errors) & to_reject==1, server("https://emass1991-demo.mysurvey.solutions/primary/") user("emanuele_api") password("Emanuele_api1") id(interview__id) comment("You have at least 1 error in your form, please recheck and complete once the screen is GREEN") //more than X errors trigger rejection
+sursol rejectHQ if n_questions_unanswered>=1000000000 & !mi(n_questions_unanswered), server("https://emass1991-demo.mysurvey.solutions/primary/") user("emanuele_api") password("Emanuele_api1") id(interview__id) comment("You have at least 1 unanswered field in your form, please recheck and complete once the screen is GREEN") //more than X unanswered question triggers rejection
 
 merge 1:1 interview__id using "${gsdDataRaw}//paradata.dta", nogen keep(1 3) //merge metavariables from paradata analysis
 

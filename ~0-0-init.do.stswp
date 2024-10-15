@@ -65,7 +65,7 @@ local swdLocal = "C:\KIHBS_2024_Pilot"
 }
 *Denis
 else if (inlist("${serial_number}","123456")) {
-	local swdLocal = "D:\KIHBS 24_2025\"
+local swdLocal = "D:\KIHBS 24_2025\"
 }
 *Katra 
 else if (inlist("${suser}","KNBS")) {
