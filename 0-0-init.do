@@ -52,7 +52,7 @@ global gsdQuestionnaire = "`swdLocal'/Questionnaire"
 global gsdDocuments = "`swdLocal'/Documents"
 
 *if needed install the necessary commands
-local commands = "filelist fs matchit freqindex savesome mdesc distinct fre outdetect gtools confirmdir ralpha missings egenmore"
+local commands = "filelist fs matchit freqindex savesome mdesc distinct fre outdetect gtools confirmdir ralpha missings egenmore betterbar"
 foreach c of local commands {
 	qui capture which `c'
 	qui if _rc!=0 {
