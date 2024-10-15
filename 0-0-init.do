@@ -39,6 +39,10 @@ local swdLocal = "C:\Users\KNBS\OneDrive - Kenya National Bureau of Statisitics\
 else if (inlist("${suser}","USER")) {
 local swdLocal = "C:\Users\USER\OneDrive - Kenya National Bureau of Statisitics\KIHBS24\2024_KIHBS_Pilot"
 }
+*Silas
+else if (inlist("${suser}","SILAS MULWA")) {
+local swdLocal = "C:\KIHBS_2024_Pilot"
+}
 *Denis
 cap confirmdir "D:\KIHBS 24_2025\"
 if _rc==0 {
