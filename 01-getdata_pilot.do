@@ -352,6 +352,7 @@ tabstatxls duration_overall	dur_sec_A	dur_sec_B	dur_sec_C	rejections__sup	reject
 local foodtas cereals meat oil_fats fruits veges sugars alcohtobac //for each food category dataset 
 foreach f of local foodtas {
 	use "${gsdDataRaw}//`f'.dta",clear //open dta
+	//********* TEMPORARY, TO RESOLVE PROBLEM IN KWALE, NOT NEEDED IN FUTURE
 		// Establish province
 			recode A01 (1/6 = 1)(7/9 = 2)(10/17 = 3)(18/22 = 4)(23/36 = 5)(37/40 = 6)(41/46 = 7)(47=8), gen(prov)
 		// Bring in conversion factors
@@ -384,12 +385,18 @@ foreach f of local foodtas {
 				}
 				replace tot_kcal_cons_`f'_fi = qty_kglt_2_`f'*10*calories_coeff_`f'
 				drop prov conv*
+	//****************** END KWALE RESOLUTION 
 	*Store the value labels for 2 variables that need a single value label
 	decode q2_purch_unit_`f',gen(q2_purch_unit_`f'_s) //convert to string the label
 	decode q3_cons_unit_tot_`f',gen(q3_cons_unit_tot_`f'_s)	//convert to string the label
 	qui renvars, subs(_`f' ) //rename variables 
 	qui renvars, subs(`f'_ food_ )
 	gen original_food_data="`f'"
+	//****************** TEMPORARY FIX FOR KWALE, NOT NEEDED IN FUTURE
+		// Calculate aggregated calories by group
+		egen total_kcal_cons_`f'_temp = sum(tot_kcal_cons_fi), by(interview__id)
+	//****************** END KWALE RESOLUTION 
+
 	tempfile `f'_dta
 	qui save ``f'_dta', replace 
 
@@ -411,8 +418,8 @@ drop q2_purch_unit_s q3_cons_unit_tot_s
 tempfile food_1 
 qui save `food_1', replace 
 *Import food id labels from the category files 
-local foodtas cereals_items alcohol_tobac fruits_nutsitems meats_fishitems oil_fatsitems sugars_items veges_items 
-foreach f of local foodtas { 
+local foodtas_i cereals_items alcohol_tobac fruits_nutsitems meats_fishitems oil_fatsitems sugars_items veges_items 
+foreach f of local foodtas_i { 
 	import excel "${gsdDataRaw}\[`f']KIHBS 2024 25 Pilot Survey", sheet("Categories") firstrow clear
 	qui save "${gsdTemp}\categories_values_`f'.dta", replace 
 }
@@ -427,7 +434,15 @@ qui save `food_id_labels', replace
 
 use `food_1', clear 
 merge m:1 food__id using `food_id_labels',  keepusing(title) nogen keep(1 3) update
-merge m:1 interview__id using "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", keep(3) nogen keepusing(total_kcal_* responsible YB_hh__*) //only keep validated interviews
+merge m:1 interview__id using "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", keep(3) nogen keepusing(total_kcal_* responsible YB_hh__* A16) //only keep validated interviews
+	//****************** TEMPORARY FIX FOR KWALE, NOT NEEDED IN FUTURE
+		foreach f of local foodtas {
+			egen  total_kcal_cons_`f'_temp2 = max(total_kcal_cons_`f'_temp),by(interview__id)
+			replace total_kcal_cons_`f'=total_kcal_cons_`f'_temp2 if total_kcal_cons_`f'_temp2!=.
+			replace total_kcal_pp_pd_`f' = (total_kcal_cons_`f'/7)/A16
+			drop total_kcal_cons_`f'_temp*
+		}
+	//******************* END KWALE FIX
 egen a=rowtotal(YB_hh__*)
 gen foodaway_hh=a>0 & !mi(a)
 preserve 
