@@ -386,24 +386,24 @@ foreach f of local foodtas {
 		// Bring in conversion factors
 			preserve
 				if "`f'" == "alcohtobac" {
-					import delimited "${gsdDataRaw}//alcohol_convfactors.txt", clear // Special case due to inconsistent naming
+					qui import delimited "${gsdDataRaw}//alcohol_convfactors.txt", clear // Special case due to inconsistent naming
 				}
 				else {
-					import delimited "${gsdDataRaw}//`f'_convfactors.txt", clear
+					qui import delimited "${gsdDataRaw}//`f'_convfactors.txt", clear
 				}
 				clonevar rowcode_p = rowcode
 				clonevar rowcode_c = rowcode
 				tempfile cfs
-				save `cfs'
+				qui save `cfs'
 			restore
 		ren rowcode_*_p rowcode_p
 		ren rowcode_*_c rowcode_c
-		merge m:1 rowcode_p using `cfs', keep(match master) keepusing(rowcode_p conv_*) nogen
+		qui merge m:1 rowcode_p using `cfs', keep(match master) keepusing(rowcode_p conv_*) nogen
 		// Apply relevant conversion factors
 			forvalues p = 1/7 {
 				qui replace qty_kglt_1_`f' = q3_purch_qty_`f'*conv_prov`p' if prov==`p'
 			}
-			replace unit_value = q3_purch_cost_`f'/qty_kglt_1_`f'
+			qui replace unit_value = q3_purch_cost_`f'/qty_kglt_1_`f'
 		// Now for consumption
 			drop conv_*
 			qui merge m:1 rowcode_c using `cfs', keep(match master) keepusing(rowcode_c conv_*) nogen
@@ -411,7 +411,7 @@ foreach f of local foodtas {
 				forvalues p = 1/7 {
 					qui replace qty_kglt_2_`f' = q3_cons_qty_tot_`f'*conv_prov`p' if prov==`p'
 				}
-				replace tot_kcal_cons_`f'_fi = qty_kglt_2_`f'*10*calories_coeff_`f'
+				qui replace tot_kcal_cons_`f'_fi = qty_kglt_2_`f'*10*calories_coeff_`f'
 				drop prov conv*
 	//****************** END KWALE RESOLUTION 
 	*Store the value labels for 2 variables that need a single value label
@@ -422,7 +422,7 @@ foreach f of local foodtas {
 	qui gen original_food_data="`f'"
 	//****************** TEMPORARY FIX FOR KWALE, NOT NEEDED IN FUTURE
 		// Calculate aggregated calories by group
-		egen total_kcal_cons_`f'_temp = sum(tot_kcal_cons_fi), by(interview__id)
+		qui egen total_kcal_cons_`f'_temp = sum(tot_kcal_cons_fi), by(interview__id)
 	//****************** END KWALE RESOLUTION 
 
 	tempfile `f'_dta
@@ -461,13 +461,13 @@ tempfile food_id_labels
 qui save `food_id_labels', replace 
 
 use `food_1', clear 
-merge m:1 food__id using `food_id_labels',  keepusing(title) nogen keep(1 3) update
-merge m:1 interview__id using "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", keep(3) nogen keepusing(total_kcal_* responsible YB_hh__* A16) //only keep validated interviews
+qui merge m:1 food__id using `food_id_labels',  keepusing(title) nogen keep(1 3) update
+qui merge m:1 interview__id using "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", keep(3) nogen keepusing(total_kcal_* responsible YB_hh__* A16) //only keep validated interviews
 	//****************** TEMPORARY FIX FOR KWALE, NOT NEEDED IN FUTURE
 		foreach f of local foodtas {
-			egen  total_kcal_cons_`f'_temp2 = max(total_kcal_cons_`f'_temp),by(interview__id)
-			replace total_kcal_cons_`f'=total_kcal_cons_`f'_temp2 if total_kcal_cons_`f'_temp2!=.
-			replace total_kcal_pp_pd_`f' = (total_kcal_cons_`f'/7)/A16
+			qui egen  total_kcal_cons_`f'_temp2 = max(total_kcal_cons_`f'_temp),by(interview__id)
+			qui replace total_kcal_cons_`f'=total_kcal_cons_`f'_temp2 if total_kcal_cons_`f'_temp2!=.
+			qui replace total_kcal_pp_pd_`f' = (total_kcal_cons_`f'/7)/A16
 			drop total_kcal_cons_`f'_temp*
 		}
 	//******************* END KWALE FIX
@@ -524,10 +524,10 @@ foreach s of local secs_m6 {
 local secs_m12 YJ YK  
 foreach s of local secs_m12 {
 	use "${gsdDataRaw}//`s'_12m_expenses.dta", clear 
-	renvars, subs(_12m )
-	renvars, subs(`s' nf_ )
-	decode nf__expenses__id, gen(nf__expenses__id_s)
-	gen recall=4
+	qui renvars, subs(_12m )
+	qui renvars, subs(`s' nf_ )
+	qui decode nf__expenses__id, gen(nf__expenses__id_s)
+	qui gen recall=4
 	tempfile nf_`s'
 	qui save `nf_`s'', replace
 }
@@ -550,10 +550,10 @@ qui save "${gsdRawOutput}/pilot/KIHBS24_pilot_durables.dta", replace
 use "${gsdDataRaw}//household_roster.dta", clear 
 *Compute adult equivalent 
 gen pre_adq_scale = .
-replace pre_adq_scale=0.24   if inrange(age_years,0,4)
-replace pre_adq_scale=0.65   if inrange(age_years,5,14)
-replace pre_adq_scale=1.00   if inrange(age_years,15,112)
-bys interview__id: egen adq_scale = sum(pre_adq_scale)
+qui replace pre_adq_scale=0.24   if inrange(age_years,0,4)
+qui replace pre_adq_scale=0.65   if inrange(age_years,5,14)
+qui replace pre_adq_scale=1.00   if inrange(age_years,15,112)
+qui bys interview__id: egen adq_scale = sum(pre_adq_scale)
 label var adq_scale "Adult Equivalent Scale"
 *Compute total expenses on food away from home
 egen fafh_hhmr=rowtotal(YB03a_* YB03b_*) 
