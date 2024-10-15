@@ -1,9 +1,15 @@
 use "${gsdDataRaw}/r_Durables_Expenditures.dta", clear
 merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing(A16 responsible) nogen keep(3)
-recode A01 (1/6=1) (7/9=2) (10/17=3) (18/22=4) (23/36=5) (37/40=6) (41/46=7) (47=8), gen(province)
-lab def province 1 "Coast" 2 "North-Eastern" 3 "Eastern" 4 "Central" 5 "Rift Valley" 6 "Western" 7 "Nyanza" 8 "Nairobi"
-lab val province province
 clonevar durableid=r_Durables_Expenditures__id
+
+//Bring in adult equivalent hh members and education yearly expenses
+preserve 
+use "${gsdRawOutput}/pilot/household_roster.dta", clear 
+duplicates drop interview__id, force
+tempfile hhm 
+qui save `hhm'
+restore 
+merge m:1 interview__id using `hhm', keepusing(adq_scale) nogen keep(3)
 
 ***********************************************
 **# 2 | CALCULATE AND CLEAN DEPRECIATION RATES
