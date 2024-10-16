@@ -1,8 +1,22 @@
 clear all
 set gr off 
 
-**# Analyze paradata
-qui import delimited using "${gsdDataRaw}/paradata_all.tab", clear
+**# Download the data via API
+*January
+sursol export "KIHBS 2024 25 Main Survey", dir("${gsdTemp}/january") server("https://kihbs.knbs.or.ke/kihbs") user(K1Hb5_Ap1) password(D1fFcu!t.in-G3tt1ng S0m3.d@ta) stata para nodownload versions(1 2) //January code
+//Append
+qui sursol append "KIHBS_2024_25_Pilot", dir("${gsdTemp}/january") export("${gsdDataRaw}/suso/january") server("https://kihbs.knbs.or.ke/kihbs") sortdesc copy(A01 A06 A09 A15 hhid_str)
+//Analyze paradata
+sursol para "KIHBS_2024_25_Pilot", directory("${gsdTemp}/january") export("${gsdDataRaw}/january") time(15)
+
+*February
+sursol export "KIHBS 2024 25 Main Survey", dir("${gsdTemp}/") server("https://kihbs.knbs.or.ke/kihbs") user(K1Hb5_Ap1) password(D1fFcu!t.in-G3tt1ng S0m3.d@ta) stata para nodownload versions(1 2) //January code
+//Append
+qui sursol append "KIHBS_2024_25_Pilot", dir("${gsdTemp}/") export("${gsdDataRaw}/suso/pilot") server("https://kihbs.knbs.or.ke/kihbs") sortdesc copy(A01 A06 A09 A15 hhid_str)
+//Analyze paradata
+sursol para "KIHBS_2024_25_Pilot", directory("${gsdTemp}/") export("${gsdDataRaw}/suso/pilot") time(15)
+
+
 
 // ONLY KEEP INTERVIEWER ACTIONS
 keep if role==1
@@ -161,10 +175,21 @@ qui save "${gsdRawOutput}/pilot/output_file.dta", replace
 restore
 merge 1:1 interview__id using "${gsdRawOutput}/pilot/output_file.dta", nogen keep(3) keepusing(unit_risk_score)
 isid hhid_str
+betterbarci unit_risk_score , over(A01) v n format(%9.1f) bar title("Risk score") subtitle("By enuemerator") xlab("")
+
 qui save "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", replace
 
 *Selected section durations
 use "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", clear 
+lab def prefill 0 "Single layer" 1 "2 layered"
+lab val prefill prefill
+gen nat=1 
+bys nat: egen sectYA_dur_nat_avg=mean(sectYA_dur)
+betterbarci sectYA_dur, over(prefill) by(A15) n format(%9.1f) v bar ytitle("Minutes") subtitle("By residence") saving("${gsdTemp}/g1.gph", replace) legend(off)  //xlab("") 
+betterbarci sectYA_dur,  n format(%9.1f) over(prefill) v bar ytitle("Minutes")  subtitle("National") saving("${gsdTemp}/g2.gph", replace)  //xlab("")
+gr combine "${gsdTemp}/g1.gph" "${gsdTemp}/g2.gph", ycom title("Duration Section YA | By approach")
+
+
 set gr on
 //Fertility asked to women in age range 15-49 i.e.: inrange(B05,15,49) & B04==1
 preserve 
