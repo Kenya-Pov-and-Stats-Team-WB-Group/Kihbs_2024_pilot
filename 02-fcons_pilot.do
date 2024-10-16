@@ -1,5 +1,5 @@
 use "${gsdRawOutput}/pilot/KIHBS24_pilot_fooditems.dta", clear
-merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing(A16 responsible prefill prefill_group) nogen keep(3)
+merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing(A16 responsible prefill prefill_group province) nogen keep(3)
 
 bys A01 food__id: egen uv_p50_county=median(unit_value)
 bys province food__id: egen uv_p50_prov=median(unit_value)
