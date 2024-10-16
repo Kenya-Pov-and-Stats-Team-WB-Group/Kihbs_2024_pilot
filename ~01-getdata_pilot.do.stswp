@@ -82,7 +82,7 @@ qui destring version, replace //Form version
 keep if inlist(version,1)
 keep if !inlist(interview__status,65,125) //only retain non rejected interviews
 clonevar submissiondate=tmlstact //Submissiondate
-betterbarci consented, over(A01) n  v bar title("Consent rate") pct yscale(off) xlab("")
+//betterbarci consented, over(A01) n  v bar title("Consent rate") pct yscale(off) xlab("")
 qui graph export "${gsdOutput}/consent_rate_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 keep if consented==1
 
@@ -154,7 +154,7 @@ recode A01 (1/6=1) (7/9=2) (10/17=3) (18/22=4) (23/36=5) (37/40=6) (41/46=7) (47
 lab def province 1 "Coast" 2 "North-Eastern" 3 "Eastern" 4 "Central" 5 "Rift Valley" 6 "Western" 7 "Nyanza" 8 "Nairobi"
 lab val province province
 
-*Import the RISSK results and merge them into survey data
+*Import the RISSK results and merge th
 preserve 
 qui import delimited "${gsdDataRaw}/\output_file.csv", clear
 qui save "${gsdRawOutput}/pilot/output_file.dta", replace
