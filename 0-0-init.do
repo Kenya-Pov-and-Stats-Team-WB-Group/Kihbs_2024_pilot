@@ -48,8 +48,8 @@ else if (inlist("${suser}","wb412495", "WB412495")) {
 	local swdLocal = "C:\Users\WB412495\OneDrive - WBG\KIHBS_2024_Pilot"	
 }
 *Magara
-else if (inlist("${serial_number}","123456")) {
-	local swdLocal = "C:Magara's path"	
+else if (inlist("${serial_number}","18461036")) {
+	local swdLocal = "C:\Kihbs_2024_pilot\Kihbs_2024_pilot"	
 }
 *Pius
 else if (inlist("${serial_number}","123456")) {
@@ -64,7 +64,7 @@ else if (inlist("${suser}","SILAS MULWA")) {
 local swdLocal = "C:\KIHBS_2024_Pilot"
 }
 *Denis
-else if (inlist("${serial_number}","123456")) {
+else if (inlist("${serial_number}","501806395089")) {
 	local swdLocal = "D:\KIHBS 24_2025\"
 }
 *Katra 
