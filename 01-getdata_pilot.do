@@ -53,11 +53,6 @@ foreach s of local sections {
 	qui gen answ_pm_sect`s'= n_answers_sect`s'/sect`s'_dur
 	lab var answ_pm_sect`s' "`s'"
 }
-
-graph hbar (mean) sect*_dur , blabel(bar, size(vsmall) format(%9.2g)) bargap(25) legend(size(small)) ytitle("Minutes", size(small))  ylabel(, labsize(small))  title("Average duration by section") //sections duration (absolute)
-qui graph export "${gsdOutput}/section_duration.jpg", as(jpg) name("Graph") quality(100) replace
-graph hbar (mean) perc_dur_sec* , blabel(bar, size(vsmall) format(%9.2g)) bargap(25) legend(size(small)) ytitle("%", size(small))  ylabel(, labsize(small))  title("Average proportion of interview time by section") //sections duration (absolute)
-qui graph export "${gsdOutput}/section_relative_duration.jpg", as(jpg) name("Graph") quality(100) replace
 	
 lab var answ_pm "Answers per Minute"
 lab var rawdurint "Raw duration of interview in seconds between first and last action" 
@@ -82,8 +77,10 @@ qui destring version, replace //Form version
 keep if inlist(version,1)
 keep if !inlist(interview__status,65,125) //only retain non rejected interviews
 clonevar submissiondate=tmlstact //Submissiondate
-betterbarci consented, over(A01) n  v bar title("Consent rate") pct yscale(off) xlab("")
-qui graph export "${gsdOutput}/consent_rate_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+betterbar consented, over(A01) n v bar title("Gross response rate") pct yscale(off) xlab("") note("Household response over total households")
+qui graph export "${gsdOutput}/grossresponse_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
+betterbar consented if inlist(a1_visitstatus,1,2,3), over(A01) n  v bar title("Net response rate") pct yscale(off) xlab("") note("Household response over households found")
+qui graph export "${gsdOutput}/netresponse_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 keep if consented==1
 
 *Code for accurately auto-rejecting interviews with validation errors
@@ -112,39 +109,6 @@ sursol rejectHQ if n_questions_unanswered>=1000000000 & !mi(n_questions_unanswer
 
 merge 1:1 interview__id using "${gsdDataRaw}//paradata.dta", nogen keep(1 3) //merge metavariables from paradata analysis
 
-gen prop_removed=(n_removed/n_answer)*100
-gen prop_errors=(entities__errors/n_answer)*100
-qui outdetect answ_pm_sectS,best replace force
-bys A01: egen mean_apmS=mean(answ_pm_sectS)
-replace answ_pm_sectS=mean_apmS if inlist(_out,1,2)
-betterbarci answ_pm_sect*,  n format(%9.1f) bar title("Answers per minute") subtitle("By section") xlab("")
-qui graph export "${gsdOutput}/answers_perminute_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
-
-*Overall duration
-qui replace interview__duration = subinstr(interview__duration,"00.","",.)
-qui split interview__duration,p(":")
-forval i=1/3{
-	qui destring interview__duration`i', replace
-}
-qui gen duration_overall=(interview__duration1*60)+interview__duration2+(interview__duration3/60)
-drop interview__duratio*
-*Sections' duration 
-local sections A B C D E F G H I J K L M N O P Q R S T U V W X YA YB YD YE YG YJ YL 
-foreach s of local sections {
-	qui replace InterviewStart_Sec`s' = subinstr(InterviewStart_Sec`s',"T"," ",.)
-	qui replace InterviewEnd_Sec`s' = subinstr(InterviewEnd_Sec`s',"T"," ",.)
-	
-	qui generate double InterviewStart_Sec`s'_stata = clock(InterviewStart_Sec`s', "YMDhms")
-	qui format InterviewStart_Sec`s'_stata %tc
-	qui generate double InterviewEnd_Sec`s'_stata = clock(InterviewEnd_Sec`s', "YMDhms")
-	qui format InterviewEnd_Sec`s'_stata %tc
-
-	qui gen dur_sec_`s'=(InterviewEnd_Sec`s'_stata-InterviewStart_Sec`s'_stata)/60000
-	qui replace dur_sec_`s'=. if dur_sec_`s'<0
-}
-
-egen duration_overall_sumsecs=rowtotal(dur_sec_*) 
-summ duration_overall duration_overall_sumsecs
 decode A01, gen(county_name)
 clonevar ea_name=A06
 clonevar foname=responsible
@@ -154,6 +118,19 @@ recode A01 (1/6=1) (7/9=2) (10/17=3) (18/22=4) (23/36=5) (37/40=6) (41/46=7) (47
 lab def province 1 "Coast" 2 "North-Eastern" 3 "Eastern" 4 "Central" 5 "Rift Valley" 6 "Western" 7 "Nyanza" 8 "Nairobi"
 lab val province province
 
+gen prop_removed=(n_removed/n_answer)*100
+gen prop_errors=(entities__errors/n_answer)*100
+qui outdetect answ_pm_sectS,best replace force
+bys A01: egen mean_apmS=mean(answ_pm_sectS)
+replace answ_pm_sectS=mean_apmS if inlist(_out,1,2)
+betterbar answ_pm_sectA answ_pm_sectB answ_pm_sectC answ_pm_sectY* answ_pm_sectD-answ_pm_sectX,  n format(%9.1f) v bar title("Answers per minute") subtitle("By section") xlab("")
+qui graph export "${gsdOutput}/answers_perminute_bysection.jpg", as(jpg) name("Graph") quality(100) replace
+
+graph hbar (mean) sectA_dur sectB_dur sectC_dur sectY*_dur sectD_dur- sectX_dur , blabel(bar, size(vsmall) format(%9.2g)) bargap(25) legend(size(small)) ytitle("Minutes", size(small))  ylabel(, labsize(small))  title("Average duration by section") //sections duration (absolute)
+qui graph export "${gsdOutput}/section_duration.jpg", as(jpg) name("Graph") quality(100) replace
+graph hbar (mean) perc_dur_sec* , blabel(bar, size(vsmall) format(%9.2g)) bargap(25) legend(size(small)) ytitle("%", size(small))  ylabel(, labsize(small))  title("Average proportion of interview time by section") //sections duration (absolute)
+qui graph export "${gsdOutput}/section_relative_duration.jpg", as(jpg) name("Graph") quality(100) replace
+
 *Import the RISSK results and merge them into survey data
 preserve 
 qui import delimited "${gsdDataRaw}/\output_file.csv", clear
@@ -161,7 +138,8 @@ qui save "${gsdRawOutput}/pilot/output_file.dta", replace
 restore
 merge 1:1 interview__id using "${gsdRawOutput}/pilot/output_file.dta", nogen keep(3) keepusing(unit_risk_score)
 isid hhid_str
-betterbarci unit_risk_score , over(A01) v n format(%9.1f) bar title("Risk score") subtitle("By enuemerator") xlab("")
+betterbarci unit_risk_score , over(A01) v n format(%9.1f) bar title("Risk score") subtitle("By county") xlab("") ytitle("Risk score") note(Risk score indicator ranges between 0 (no risk) to 100 (highest risk))
+qui graph export "${gsdOutput}/risk_score_bycounty.jpg", as(jpg) name("Graph") quality(100) replace	
 
 qui save "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", replace
 
@@ -175,9 +153,14 @@ betterbarci sectYA_dur, over(prefill) by(A15) n format(%9.1f) v bar ytitle("Minu
 betterbarci sectYA_dur,  n format(%9.1f) over(prefill) v bar ytitle("Minutes")  subtitle("National") saving("${gsdTemp}/g2.gph", replace)  //xlab("")
 gr combine "${gsdTemp}/g1.gph" "${gsdTemp}/g2.gph", ycom title("Duration Section YA | By approach")
 
+//Food at home section 
+betterbarci sectYA_dur, over(A01) n format(%9.0f) v bar title("Food at home section duration") subtitle("By county") xlab("")
+qui graph export "${gsdOutput}/secYA_duration_bycounty.jpg", as(jpg) name("Graph") quality(100) replace	
+//Food at home section (1 vs 2 layers approach)
+betterbarci sectYA_dur, over(prefill) by(A15) n format(%9.0f) v bar title("Food at home section duration") subtitle("By approach") 
+qui graph export "${gsdOutput}/secYA_duration_byapproach.jpg", as(jpg) name("Graph") quality(100) replace	
 
-set gr on
-//Fertility asked to women in age range 15-49 i.e.: inrange(B05,15,49) & B04==1
+**# Fertility asked to women in age range 15-49 i.e.: inrange(B05,15,49) & B04==1
 preserve 
 use "${gsdDataRaw}/household_roster.dta", clear
 gen Women_15_49=inrange(B05,15,49) & B04==1
@@ -190,7 +173,7 @@ restore
 merge 1:1 interview__key using `fertility', keepusing(Women_15_49_hh) keep(1 3) nogen
 betterbarci sectE_fertility_dur if Women_15_49_hh==1, over(A01) n format(%9.1f) v bar ytitle("Minutes") title("Duration Section E | Fertility subsection") xlab("")
 qui graph export "${gsdOutput}/sec_E_fertility_dur.jpg", as(jpg) name("Graph") quality(100) replace	
-//Deaths
+**# Deaths 
 *Proportion of health module's time spent on fertility subsection 
 gen sectE_fert_prop=sectE_fertility_dur/sectE_dur*100
 betterbarci sectE_fert_prop if Women_15_49_hh==1, over(A01) n format(%9.1f) v bar ytitle("Minutes") title("Duration Section E | Fertility subsection") xlab("")
@@ -202,7 +185,7 @@ gen sectE_deaths_prop=sectE_deaths_dur/sectE_dur*100
 qui summ sectE_deaths_prop if E58==1==1, d
 betterbarci sectE_deaths_prop if E58==1==1, over(A01) n format(%9.1f) v bar ytitle("Minutes") title("Duration Section E | Deaths subsection") note("Overall: mean=`r(mean)'; median=`r(p50)'") xlab("")
 
-// H Domestic tourism	H01==1
+**# H Domestic tourism	H01==1
 preserve 
 use "${gsdDataRaw}/household_roster.dta", clear
 bys interview__key: egen H01_hh=max(H01)
@@ -216,44 +199,45 @@ qui graph export "${gsdOutput}/sec_H_dur.jpg", as(jpg) name("Graph") quality(100
 betterbarci sectH_dur if H01_hh==1 & A16<=7, over(A16) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section H | Domestic tourism") xlab("")
 qui graph export "${gsdOutput}/sec_H_dubyhhsize.jpg", as(jpg) name("Graph") quality(100) replace	
 
-// L Land ownership and tenure	L01==1
+**# L Land ownership and tenure	L01==1
 betterbarci L01, over(A01) n  v bar title("Proportion of houshold having land") pct yscale(off) xlab("")
 betterbarci sectH_dur if L01==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section L | Land ownership and tenure") xlab("")
 qui graph export "${gsdOutput}/sec_L_dur.jpg", as(jpg) name("Graph") quality(100) replace	
 
-// M	Agriculture	L01==1 & parcel_roster.Count(x=>x.L07.ContainsAny(1,2,7))
+**# M	Agriculture	L01==1 & parcel_roster.Count(x=>x.L07.ContainsAny(1,2,7))
 preserve 
 use "${gsdDataRaw}/parcel_roster.dta", clear
+drop x L07_hh
 gen x=L07__1==1 | L07__2==1 | L07__7==1
 bys interview__key: egen L07_hh=max(x)
 duplicates drop interview__key, force
-tempfile climate
-qui save `climate', replace
+tempfile agri
+qui save `agri', replace
 restore 
-merge 1:1 interview__key using `climate', keepusing(L07_hh) keep(1 3) nogen
+merge 1:1 interview__key using `agri', keepusing(L07_hh) keep(1 3) nogen
 betterbarci sectM_dur if L07_hh==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section M | Land ownership and tenure") xlab("")
 qui graph export "${gsdOutput}/sec_M_dur.jpg", as(jpg) name("Graph") quality(100) replace	
  
-// N	Agricultural input and output	(seemingly no enabling condition?)
+**# N	Agricultural input and output	(seemingly no enabling condition?)
 betterbarci sectN_dur if L01==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section N | Agri input/output") xlab("")
 
-// O	Livestock	O01==1
+**# O	Livestock	O01==1
 betterbarci O01, over(A01) n  v bar title("Proportion of houshold having livestock") pct yscale(off) xlab("")
 betterbarci sectO_dur if O01==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section O | Livestock") xlab("")
 qui graph export "${gsdOutput}/sec_O_dur.jpg", as(jpg) name("Graph") quality(100) replace	
 
-// P	Enterprises	P02==1
+**# P	Enterprises	P02==1
 betterbarci P02, over(A01) n  v bar title("Proportion of houshold having enterprise") pct yscale(off)
 betterbarci sectP_dur if P02==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section P | Enterprise") 
 qui graph export "${gsdOutput}/sec_P_dur.jpg", as(jpg) name("Graph") quality(100) replace	
 
-// Q	Transfers	Q01==1 | Q08==1
+**# Q	Transfers	Q01==1 | Q08==1
 betterbarci Q01, over(A01) n  v bar title("Proportion of houshold reporting transfer") pct yscale(off) xlab("")
 betterbarci Q08, over(A01) n  v bar title("Proportion of houshold giving enterprise") pct yscale(off) xlab("")
 betterbarci sectQ_dur if Q01==1 | Q08==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section Q | Transfers") xlab("")
 qui graph export "${gsdOutput}/sec_Q_dur.jpg", as(jpg) name("Graph") quality(100) replace	
 
-// T	Climate extremes	T03!=1
+**# T Climate extremes T03!=1
 preserve 
 use "${gsdDataRaw}/climate1_roster.dta", clear
 gen x=T03!=1
@@ -267,6 +251,34 @@ betterbarci T03_hh, over(A01) n  v bar title("Proportion of household w/ climate
 betterbarci sectT_dur if T03_hh==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section T | Climate shocks") xlab("")
 qui graph export "${gsdOutput}/sec_T_dur.jpg", as(jpg) name("Graph") quality(100) replace	
 
+gen Q01_Q08=(Q01==1 | Q08==1 )
+gen L01_a=L01
+lab var Women_15_49_hh "Fertility"
+lab var E58 "Deaths"
+lab var H01_hh "Domestic tourism"
+lab var L01 "Agri in/output"
+lab var L01_a "Land ownership/tenure"
+lab var L07_hh "Agriculture"
+lab var O01 "Livestock"
+lab var P02 "Enterprise"
+lab var Q01_Q08" Transfers"
+lab var T03_hh "Climate shocks"
+
+betterbarci Women_15_49_hh E58 H01_hh L01 L01_a L07_hh O01 P02 Q01_Q08  T03_hh, n bar pct  ytitle("% of households") title("Selected sections' relevance")
+qui graph export "${gsdOutput}/sections_relevance.jpg", as(jpg) name("Graph") quality(100) replace	
+
+   
+tabstat sectE_fertility_dur sectE_fert_prop if Women_15_49_hh==1,s(mean median) //fertility
+mean sectE_deaths_prop if E58==1 //Deaths
+mean sectH_dur if H01_hh==1 //Domestic tourism
+mean sectH_dur if L01==1 //Land ownership/tenure
+mean sectN_dur if L01==1 //Agriculture input/output
+mean sectM_dur if L07_hh==1 //Agriculture
+mean sectO_dur if O01==1 //Livestock
+mean sectP_dur if P02==1 //Enterprise
+mean sectQ_dur if Q01_Q08==1 //Transfers
+mean sectT_dur if T03_hh==1 //Climate shocks
+ex
 
 //Overall county level diagnostics
 use "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", clear
@@ -278,7 +290,7 @@ qui graph export "${gsdOutput}/cleandur_bycounty.jpg", as(jpg) name("Graph") qua
 betterbarci rawdur_min, over(A01) n format(%9.0f) bar ytitle("Minutes") title("Interview duration") subtitle("Total (including lazy) time") v saving("${gsdOutput}/rawdur_bycounty.gph", replace) xlab("")
 qui graph export "${gsdOutput}/rawdur_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 *Number of answers per minute
-betterbarci answ_pm, over(A01) n format(%9.1f) bar ytitle("N. Answers") title("Interviewer productivity") subtitle("Number of answers per minute") v xlab("")
+betterbarci answ_pm, over(A01) n format(%9.1f) bar ytitle("N. Answers") title("Number of answers per minute") v xlab("")
 qui graph export "${gsdOutput}/answpm_bycounty.jpg", as(jpg) name("Graph") quality(100) replace
 *Proportion of answers removed
 betterbarci prop_removed, over(A01) n format(%9.1f) bar ytitle("%") title("Proportion of answers removed") v pct saving("${gsdOutput}/answrem_bycounty.gph", replace) xlab("")
