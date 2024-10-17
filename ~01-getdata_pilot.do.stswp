@@ -1,7 +1,6 @@
 clear all
 set gr off 
 
-**# Analyze paradata
 qui import delimited using "${gsdDataRaw}/paradata_all.tab", clear
 
 // ONLY KEEP INTERVIEWER ACTIONS

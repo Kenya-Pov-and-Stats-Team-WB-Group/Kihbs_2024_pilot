@@ -52,7 +52,7 @@ else if (inlist("${serial_number}","18461036")) {
 	local swdLocal = "C:\Kihbs_2024_pilot\Kihbs_2024_pilot"	
 }
 *Pius
-else if (inlist("${serial_number}","123456")) {
+else if (inlist("${serial_number}","501806395087")) {
 	local swdLocal = "C:\Users\KNBS\OneDrive - Kenya National Bureau of Statisitics\KIHBS_Pilot"
 }
 *Samoei
