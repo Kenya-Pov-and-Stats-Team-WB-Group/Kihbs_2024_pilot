@@ -1,5 +1,5 @@
 use "${gsdRawOutput}/pilot/KIHBS24_pilot_fooditems.dta", clear
-merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing(A16 A06 responsible prefill prefill_group province) nogen keep(3)
+merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing(A16 A06 A21 responsible prefill prefill_group province) nogen keep(3)
 
 bys A01 food__id: egen uv_p50_county=median(unit_value)
 bys province food__id: egen uv_p50_prov=median(unit_value)
@@ -18,7 +18,7 @@ gen purch_item_count = q1__1==1
 sort interview__id 
 br interview__id food__id qty_kglt_2 uv fcons
 encode responsible,gen(responsible1)
-gcollapse (sum) fcons *item_count (mean) A16 (first) A01 A15 province responsible1 prefill prefill_group total_kcal_pp_pd, by(interview__id A06)
+gcollapse (sum) fcons *item_count (mean) A16 (first) A01 A15 A21 province responsible1 prefill prefill_group total_kcal_pp_pd, by(interview__id A06)
 
 *Add food away from home 
 merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing( YB03a_* YB03b_*) nogen keep(3) //bring in expenditures on food away from home
@@ -39,22 +39,22 @@ merge 1:1 interview__id using `hhm', keepusing(adq_scale fafh_hhm num_FAFH) noge
 
 gen fcons_plus_fafh=fcons+fafh+fafh_hhm //include food away from home in the monthly per person consumption aggregate
 
-gen fcons_hh_annual=fcons_plus_fafh*((365/7)) //annual consumption value all food items consumed
+gen fcons_hh_annual=fcons_plus_fafh*((365/7)) //annual Consumption Expenditures all food items consumed
 gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 
 // At home food consumption only
-	gen fcons_athome_annual=fcons*((365/7)) //annual consumption value all food items consumed
+	gen fcons_athome_annual=fcons*((365/7)) //annual Consumption Expenditures all food items consumed
 	gen fcons_athome_padq_pm=fcons_athome_annual/adq_scale/12
 	lab var fcons_athome_annual "Annual total at home food conusmption"
 	lab var fcons_athome_padq_pm "Monthly at home food conusmption - per adult equivalent"
 	
 // FAFH consumption only
-	gen fafh_annual=fafh*((365/7)) //annual consumption value all food items consumed
+	gen fafh_annual=fafh*((365/7)) //annual Consumption Expenditures all food items consumed
 	gen fafh_padq_pm=fafh_annual/adq_scale/12
 	lab var fafh_annual "Annual total FAFH reported at HH level"
 	lab var fafh_padq_pm "Monthly FAFH reported at HH level - per adult equivalent"
 
-	gen fafh_hhm_annual=fafh_hhm*((365/7)) //annual consumption value all food items consumed
+	gen fafh_hhm_annual=fafh_hhm*((365/7)) //annual Consumption Expenditures all food items consumed
 	gen fafh_hhm_padq_pm=fafh_hhm_annual/adq_scale/12
 	lab var fafh_hhm_annual "Annual total FAFH reported at individual level"
 	lab var fafh_hhm_padq_pm "Monthly FAFH reported at individual level - per adult equivalent"
@@ -65,34 +65,42 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 // OVERALL COMPARISONS (ACROSS COUNTIES)
 	// Number of items
 		betterbarci item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed or Purchased") saving("${gsdOutput}/fditem_count_bycounty.gph", replace) xlab("")
-		
-		betterbarci purch_item_count cons_item_count, n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_national.gph", replace) 
 
-		betterbarci purch_item_count cons_item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(18.5 "Consumed" 57.5 "Purchased")
+		
+		betterbarci purch_item_count cons_item_count, n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items Consumed vs Purchased") subtitle("National") saving("${gsdOutput}/fditem_conspurch_count_national.gph", replace) xlab(2 "Consumed" 8 "Purchased")
+		betterbarci purch_item_count cons_item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items Consumed vs Purchased") subtitle("by County") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(18.5 "Consumed" 57.5 "Purchased")
+		
+		
 		betterbarci purch_item_count cons_item_count if A01==27, over(responsible1) v n format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed vs Purchased")
 	// Share with zero items consumed
 		gen no_items_cons = cons_item_count==0
 		lab var no_items_cons "Household has zero food items consumed (at home)"
-		betterbarci no_items_cons, over(A01) n v bar ytitle("Share of households") pct title("Households with zero food items consumed") saving("${gsdOutput}/sh_nofood_bycounty.gph", replace) xlab("")
-		betterbarci no_items_cons if A01==27, over(responsible1) n v bar ytitle("Share of households") pct title("Households with zero food items consumed") xlab("")
+		tab no_items_cons
+		betterbar no_items_cons, over(A01) n v bar ytitle("Share of households") pct title("Households with zero food items consumed") saving("${gsdOutput}/sh_nofood_bycounty.gph", replace) xlab("")
+		betterbar no_items_cons if A01==2, over(A21) n v bar ytitle("Share of households") pct title("Households with zero food items consumed") subtitle("By interviewer | Kwale County") xlab("")
 		
 		
 	// Consumption expenditure
-		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(A01) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Value per AdEq") title("Monthly At-home Consumption Value per AdEq")  saving("${gsdOutput}/fcons_athome_padq_pm_bycounty.gph", replace)
+		betterbarci fcons_padq_pm if inrange(fcons_padq_pm,1,100000), vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Expenditures per AdEq") subtitle("National")saving("${gsdOutput}/fcons_padq_pm_national.gph", replace)  xlab("") legend(off)
 
-		betterbarci fcons_padq_pm if inrange(fcons_padq_pm,1,75000), over(A01) vertical n  format(%9.0f) bar ytitle("Monthly Food Consumption Value per AdEq") title("Monthly Food Consumption Value per AdEq")  saving("${gsdOutput}/fcons_athome_padq_pm_bycounty.gph", replace) xlab("")
+		betterbarci fcons_padq_pm if inrange(fcons_padq_pm,1,100000), over(A01) vertical n format(%9.0f) bar ytitle("Monthly Food Consumption Expenditures per AdEq") title("Monthly Food Consumption Expenditures per AdEq") subtitle("By County")  saving("${gsdOutput}/fcons_padq_pm_bycounty.gph", replace) note("Excluding outliers (>100,000 Shillings) and households with zero consumption expenditures") xlab("")
 		
+// FAFH expenditure
+		sum fafh_hhm_padq_pm if fafh_hhm_padq_pm<20000, det
+		betterbarci fafh_hhm_padq_pm if fafh_hhm_padq_pm<20000, over(A01) vertical n format(%9.0f) bar ytitle("Monthly FAFH Expenditures per AdEq") title("Monthly FAFH Expenditures per AdEq") subtitle("By County") saving("${gsdOutput}/fcons_fafh_padq_pm_bycounty.gph", replace) xlab("")
+		
+		betterbarci fafh_hhm_padq_pm if A01==1 & fafh_hhm_padq_pm<20000, over(responsible1) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Expenditures per AdEq") title("Monthly At-home Consumption Expenditures per AdEq") 
 	
 	// Calories
-		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000 & total_kcal_pp_pd!=0, over(A01) vertical n format(%9.0f) bar ytitle("Calories per person per day") title("Calories per person per day")  saving("${gsdOutput}/kcal_pp_pd_bycounty.gph", replace) xlab("")
+		sum total_kcal_pp_pd if total_kcal_pp_pd<10000
+		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000 & total_kcal_pp_pd!=0, over(A01) vertical n format(%9.0f) bar ytitle("Kilocalories per person per day") title("Kilocalories per person per day")  saving("${gsdOutput}/kcal_pp_pd_bycounty.gph", replace) xlab("") note("Excluding households with zero calories")
 		// Include zeros
-			betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000, over(A01) vertical n format(%9.0f) bar ytitle("Calories per person per day") title("Calories per person per day") subtitle("Including zero calories") saving("${gsdOutput}/kcal_pp_pd_wzeros_bycounty.gph", replace) xlab("")
+			betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000, over(A01) vertical n format(%9.0f) bar ytitle("Kilocalories per person per day") title("Kilocalories per person per day") subtitle("Including hh with zero calories") saving("${gsdOutput}/kcal_pp_pd_wzeros_bycounty.gph", replace) xlab("") note("Exlcuding households with more than 10,000 kilocalories")
+			
+		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000 & A01==23, over(A21) vertical n format(%9.0f) bar ytitle("Kilocalories per person per day") title("Kilocalories per person per day") subtitle("Turkana County") xlab("") note("Exlcuding households with more than 10,000 kilocalories")
 			
 			
-	// FAFH expenditure
-		betterbarci fafh_hhm_padq_pm if fafh_hhm_padq_pm<20000, over(A01) vertical n format(%9.0f) bar ytitle("Monthly FAFH Expenditures per AdEq") title("Monthly FAFH Expenditures per AdEq")  saving("${gsdOutput}/fcons_fafh_padq_pm_bycounty.gph", replace)
-		
-		betterbarci fafh_hhm_padq_pm if A01==1 & fafh_hhm_padq_pm<20000, over(responsible1) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Value per AdEq") title("Monthly At-home Consumption Value per AdEq") 
+
 
 
 	
@@ -114,9 +122,9 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 	
 	// At home expenditures
 		ttest fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), by(prefill)
-		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(prefill) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Value per AdEq") title("Monthly At-home Consumption Value per AdEq")  xlab("") saving("${gsdOutput}/fcons_athome_padq_pm_by2layer.gph", replace)
+		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(prefill) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Expenditures per AdEq") title("Monthly At-home Consumption Expenditures per AdEq")  xlab("") saving("${gsdOutput}/fcons_athome_padq_pm_by2layer.gph", replace)
 		// Urban Rural
-		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(prefill) by(A15) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Value per AdEq") title("Monthly At-home Consumption Value per AdEq") xlab(3.5 "Rural" 12.5 "Urban") saving("${gsdOutput}/fcons_athome_padq_pm_by2layer_rururb.gph", replace)
+		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(prefill) by(A15) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Expenditures per AdEq") title("Monthly At-home Consumption Expenditures per AdEq") xlab(3.5 "Rural" 12.5 "Urban") saving("${gsdOutput}/fcons_athome_padq_pm_by2layer_rururb.gph", replace)
 		
 	mkdensity fcons_athome_padq_pm if fcons_athome_padq_pm<20000,over(prefill)
 	
@@ -165,7 +173,7 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 		merge m:1 interview__id using "${gsdRawOutput}/pilot/KIHBS24_pilot_foodcons.dta", keepusing(A16) keep(master matched) nogen
 	// Set by vars and iqr factor for outlier identification
 		global byvars "food__id A15"
-		global iqr_fac 1.5
+		global iqr_fac 2.5
 	// Check unit value outliers
 		egen med_uv = median(unit_value), by(${byvars})
 		egen mean_uv = mean(unit_value), by(${byvars})
@@ -173,7 +181,9 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 		egen iqr_uv = iqr(unit_value), by(${byvars})			
 		// Deviation from mean according to IQR
 			gen iqr_uv_dev = abs(unit_value - med_uv)/iqr_uv
-			egen unit_value_out = outside(unit_value) , by(${byvars}) factor(${iqr_fac})		
+			egen unit_value_out = outside(unit_value) , by(${byvars}) factor(${iqr_fac})	
+			replace unit_value_out = 1 if unit_value_out!=.
+			replace unit_value_out = 0 if unit_value_out!=1 & unit_value!=.
 		// Reorder
 			order med* mean* sd*, after(unit_value)				
 		// Inspect large deviations
@@ -190,6 +200,8 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 		// Deviation from mean according to IQR
 			gen iqr_consval_dev = abs(cons_value_pc- med_consval)/iqr_consval
 			egen cons_value_out = outside(cons_value_pc) , by(${byvars}) factor(${iqr_fac})		
+			replace cons_value_out = 1 if cons_value_out!=.
+			replace cons_value_out = 0 if cons_value_out!=1 & cons_value_pc!=.
 		// Reorder
 			order cons_value* *_consval*, after(qty_kglt_1)		
 		// Inspect large deviations
@@ -204,19 +216,48 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 			egen iqr_kcal = iqr(kcal_cons_pc), by(${byvars})		
 		// Deviation from mean according to IQR
 			gen iqr_kcal_dev = abs(kcal_cons_pc- med_kcal)/iqr_kcal
-			egen kcal_out = outside(kcal_cons_pc) , by(${byvars}) factor(${iqr_fac})		
+			egen kcal_out = outside(kcal_cons_pc) , by(${byvars}) factor(${iqr_fac})	
+			replace kcal_out = 1 if kcal_out!=.
+			replace kcal_out = 0 if kcal_out!=1 & kcal_cons_pc!=.
+
 		// Reorder
 			order kcal* *_kcal iqr_kcal_dev , after(tot_kcal_cons_fi)		
 		// Inspect large deviations
 			br kcal* *_kcal iqr_kcal_dev q3_cons_unit_tot q3_cons_qty_tot qty_kglt_2 interview__key food__id responsible calories_coeff tot_kcal_cons_fi A16 if kcal_out!=. & food__id!=1215 & iqr_kcal>0.01	
 		
-	// Share of unit values, consumption value, and calories that are outliers
-		gen num_uv_outlier = unit_value_out!=.
-		gen num_item_purchased = q1__1==1 & unit_value!=.
-		gen num_consval_outlier = cons_value_out !=. & cons_value_pc!=.
-		gen num_item_cons_val= q1__2==1	& cons_value_pc!=.
-		gen num_kcal_outlier = kcal_out !=. & kcal_cons_pc!=.
-		gen num_item_kcal= q1__2==1	& kcal_cons_pc!=.
+		// Charts
+			// Unit values
+				// By county
+					sum unit_value_out
+					betterbar unit_value_out, over(A01) v pct bar ytitle("% of reported items") title("Share of Purchased Items with Unit Value Outliers") subtitle("By county") saving("${gsdOutput}/sh_uv_outliers_bycounty.gph", replace) xlab("")
+				// By interviewer
+				encode responsible, gen(interviewer)
+// 				betterbarci unit_value_out, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of unit value outliers") subtitle("by interviewer") saving("${gsdOutput}/sh_uv_outliers_byinterviewer.gph", replace) xlab("")
+				betterbarci unit_value_out if A01==23, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of Purchased Items with Unit Value Outliers") subtitle("by interviewer")  xlab("")
+			// Value of consumption 
+				sum cons_value_out
+				// By county
+					betterbarci cons_value_out, over(A01) v pct bar ytitle("% of reported items") title("Share of Consumed Items with Consumption Expenditure outliers") subtitle("by county") saving("${gsdOutput}/sh_consval_outliers_bycounty.gph", replace) xlab("")
+				// By interviewer
+// 					betterbarci cons_value_out, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of Consumption Expenditures outliers") subtitle("by interviewer") saving("${gsdOutput}/sh_consval_outliers_byinterviewer.gph", replace) xlab("")
+					betterbarci cons_value_out if A01==47, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of Consumed Items with Consumption Expenditure outliers") subtitle("by interviewer") xlab("")
+			// Calories
+				sum kcal_out
+				// By county
+					betterbarci kcal_out, over(A01) v pct bar ytitle("% of reported items") title("Share of Consumed Items with Calorie Cutliers") subtitle("by county") saving("${gsdOutput}/sh_consval_outliers_bycounty.gph", replace) xlab("")
+				// By interviewer
+// 					betterbarci kcal_out, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of calorie outliers") subtitle("by interviewer") saving("${gsdOutput}/sh_consval_outliers_byinterviewer.gph", replace) xlab("")
+					betterbarci kcal_out if A01==47, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of Consumed Items with Calorie Cutliers") subtitle("by interviewer") xlab("")	
+	
+	ex
+/*	
+	// Share of unit values, Consumption Expenditures, and calories that are outliers
+		egen num_uv_outlier = unit_value_out==1
+		egen num_item_purchased = q1__1==1 & unit_value!=.
+		egen num_consval_outlier = cons_value_out==1 & cons_value_pc!=.
+		egen num_item_cons_val= q1__2==1	& cons_value_pc!=.
+		egen num_kcal_outlier = kcal_out=1 & kcal_cons_pc!=.
+		egen num_item_kcal= q1__2==1	& kcal_cons_pc!=.
 		// Collapse to household level 
 			gcollapse (sum) num*, by(interview__id interview__key  A01 A06 A09 A15 hhid_str A16 responsible)		
 		// Shares
@@ -233,13 +274,15 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 				betterbarci share_uv_outlier if A01==23, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of unit value outliers") subtitle("by interviewer")  xlab("")
 			// Value of consumption 
 				// By county
-					betterbarci share_consval_outlier, over(A01) v n pct bar ytitle("% of reported items") title("Share of consumption value outliers") subtitle("by county") saving("${gsdOutput}/sh_consval_outliers_bycounty.gph", replace) xlab("")
+					betterbarci share_consval_outlier, over(A01) v n pct bar ytitle("% of reported items") title("Share of Consumption Expenditures outliers") subtitle("by county") saving("${gsdOutput}/sh_consval_outliers_bycounty.gph", replace) xlab("")
 				// By interviewer
-					betterbarci share_consval_outlier, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of consumption value outliers") subtitle("by interviewer") saving("${gsdOutput}/sh_consval_outliers_byinterviewer.gph", replace) xlab("")
-					betterbarci share_consval_outlier if A01==47, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of consumption value outliers") subtitle("by interviewer") xlab("")
+					betterbarci share_consval_outlier, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of Consumption Expenditures outliers") subtitle("by interviewer") saving("${gsdOutput}/sh_consval_outliers_byinterviewer.gph", replace) xlab("")
+					betterbarci share_consval_outlier if A01==47, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of Consumption Expenditures outliers") subtitle("by interviewer") xlab("")
 			// Calories
 				// By county
 					betterbarci share_kcal_outlier, over(A01) v n pct bar ytitle("% of reported items") title("Share of calorie outliers") subtitle("by county") saving("${gsdOutput}/sh_consval_outliers_bycounty.gph", replace) xlab("")
 				// By interviewer
 					betterbarci share_kcal_outlier, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of calorie outliers") subtitle("by interviewer") saving("${gsdOutput}/sh_consval_outliers_byinterviewer.gph", replace) xlab("")
 					betterbarci share_kcal_outlier if A01==47, over(interviewer) v n pct bar ytitle("% of reported items") title("Share of calorie outliers") subtitle("by interviewer") xlab("")
+					
+					*/
