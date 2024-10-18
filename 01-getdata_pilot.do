@@ -145,20 +145,59 @@ qui save "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", replace
 
 *Selected section durations
 use "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", clear 
+
+lab var  sectA_dur "SECTION A: HOUSEHOLD IDENTIFICATION"
+lab var  sectB_dur "SECTION B: HOUSEHOLD ROSTER"
+lab var  sectC_dur "SECTION C: EDUCATION"
+lab var  sectYA_dur "SECTION YA: WITHIN-HOUSEHOLD FOOD CONSUMPTION & EXPENDITURE OVER THE PAST 7 DAYS"
+lab var  sectYB_dur "SECTION YB: MEALS TAKEN OUTSIDE THE HOUSEHOLD DURING THE LAST 7 DAYS"
+lab var  sectYD_dur "SECTION YD: FREQUENTLY PURCHASED/CONSUMED NON-FOOD EXPENDITURES - 7 DAY RECALL PERIOD"
+lab var  sectYE_dur "SECTION YE: NON-FOOD EXPENDITURES 1 MONTH RECALL PERIODS (P1)"
+lab var  sectYF_dur "SECTION YF: NON-FOOD EXPENDITURES 1 MONTH RECALL PERIODS (P2)"
+lab var  sectYG_dur "SECTION YG : NON-FOOD EXPENDITURES 6 MONTH RECALL PERIODS" 
+lab var  sectYH_dur "SECTION YH: NON-FOOD EXPENDITURES 6 MONTH RECALL PERIODS" 
+lab var sectYL_dur "SECTION YL: DURABLES EXPENDITURES"
+lab var  sectYI_dur "SECTION YI: NON-FOOD EXPENDITURES 6 MONTH RECALL PERIODS" 
+lab var sectYK_dur "SECTION YK: SEMI-DURABLES EXPENDITURE 12 MONTHS (P1)"
+lab var sectYJ_dur "SECTION YJ: SEMI-DURABLES EXPENDITURE 12 MONTHS (P2)"
+lab var  sectD_dur "SECTION D: LABOUR" 
+lab var  sectE_dur "SECTION E: HEALTH, FERTILITY, HEALTH INSURANCE AND DISABILITY" 
+lab var  sectF_dur "SECTION F: ANTHROPOMETRY" 
+lab var  sectG_dur "SECTION G: ICT SERVICE BY HOUSEHOLD INDIVIDUAL MEMBERS" 
+lab var  sectH_dur "SECTION H: DOMESTIC TOURISM" 
+lab var  sectI_dur "SECTION I: CREDIT AND FINANCIAL INCLUSION" 
+lab var  sectJ_dur "SECTION J: HOUSING" 
+lab var  sectK_dur "SECTION K:  WATER, SANITATION AND ENERGY" 
+lab var  sectL_dur "SECTION L: LAND OWNERSHIP AND TENURE" 
+lab var  sectM_dur "SECTION M: AGRICULTURE HOLDING" 
+lab var  sectN_dur "SECTION N:  AGRICULTURE INPUT AND OUTPUT" 
+lab var  sectO_dur "SECTION O: LIVESTOCK" 
+lab var  sectP_dur "SECTION P: HOUSEHOLD ENTERPRISES" 
+lab var  sectQ_dur "SECTION Q: TRANSFERS" 
+lab var  sectR_dur "SECTION R: OTHER INCOMES" 
+lab var  sectS_dur "SECTION S: RECENT SHOCKS TO HOUSEHOLD WELFARE" 
+lab var  sectT_dur "SECTION T: CLIMATE EXTREMES: CURRENT EXPERIENCE, PAST EXPERIENCE & FUTURE EXPECTATIONS" 
+lab var  sectU_dur "SECTION U: FOOD SECURITY - LAST 12 MONTHS" 
+lab var  sectV_dur "SECTION V: HOUSEHOLD JUSTICE MODULE" 
+lab var  sectW_dur "SECTION W: HOUSEHOLD ICT AND E-WASTE" 
+lab var sectX_dur "SECTION X: SOCIAL PROTECTION"
+preserve 
+drop sectE_f_dur sectE_d_dur sectE_f_dur sectE_d_dur
+qui tabstat2excel sect*, filename("C:\Users\wb562201\OneDrive - WBG\Countries\Kenya\KEN_KIHBS_2024_pilot\Temp/sections_duration.xlsx")
+restore
+
 lab def prefill 0 "Single layer" 1 "2 layered"
 lab val prefill prefill
 gen nat=1 
 bys nat: egen sectYA_dur_nat_avg=mean(sectYA_dur)
-betterbarci sectYA_dur, over(prefill) by(A15) n format(%9.1f) v bar ytitle("Minutes") subtitle("By residence") saving("${gsdTemp}/g1.gph", replace) legend(off)  //xlab("") 
-betterbarci sectYA_dur,  n format(%9.1f) over(prefill) v bar ytitle("Minutes")  subtitle("National") saving("${gsdTemp}/g2.gph", replace)  //xlab("")
+betterbarci sectYA_dur, over(prefill) by(A15) n format(%9.1f) v bar ytitle("Minutes") subtitle("By residence") saving("${gsdTemp}/g1.gph", replace) legend(off)  xlab(3.5 "Rural" 12.5 "Urban")
+betterbarci sectYA_dur,  n format(%9.1f) over(prefill) v bar ytitle("Minutes")  subtitle("National") saving("${gsdTemp}/g2.gph", replace) xlab("") 
 gr combine "${gsdTemp}/g1.gph" "${gsdTemp}/g2.gph", ycom title("Duration Section YA | By approach")
+qui graph export "${gsdOutput}/secYA_dur_byapproach.jpg", as(jpg) name("Graph") quality(100) replace	
 
 //Food at home section 
 betterbarci sectYA_dur, over(A01) n format(%9.0f) v bar title("Food at home section duration") subtitle("By county") xlab("")
 qui graph export "${gsdOutput}/secYA_duration_bycounty.jpg", as(jpg) name("Graph") quality(100) replace	
-//Food at home section (1 vs 2 layers approach)
-betterbarci sectYA_dur, over(prefill) by(A15) n format(%9.0f) v bar title("Food at home section duration") subtitle("By approach") 
-qui graph export "${gsdOutput}/secYA_duration_byapproach.jpg", as(jpg) name("Graph") quality(100) replace	
 
 **# Fertility asked to women in age range 15-49 i.e.: inrange(B05,15,49) & B04==1
 preserve 
@@ -180,7 +219,7 @@ betterbarci sectE_fert_prop if Women_15_49_hh==1, over(A01) n format(%9.1f) v ba
 *Duration of deaths subsection for hh where it's applicable
 betterbarci sectE_fertility_dur if E58==1, over(A01) n format(%9.1f) v bar ytitle("Minutes") title("Duration Section E | Fertility subsection") xlab("")
 qui graph export "${gsdOutput}/sec_E_deaths_dur.jpg", as(jpg) name("Graph") quality(100) replace	
-*Proportion of health module's time spent on fertility subsection 
+*Proportion of health module's time spent on fertility subsection
 gen sectE_deaths_prop=sectE_deaths_dur/sectE_dur*100 
 qui summ sectE_deaths_prop if E58==1==1, d
 betterbarci sectE_deaths_prop if E58==1==1, over(A01) n format(%9.1f) v bar ytitle("Minutes") title("Duration Section E | Deaths subsection") note("Overall: mean=`r(mean)'; median=`r(p50)'") xlab("")
@@ -201,7 +240,7 @@ qui graph export "${gsdOutput}/sec_H_dubyhhsize.jpg", as(jpg) name("Graph") qual
 
 **# L Land ownership and tenure	L01==1
 betterbarci L01, over(A01) n  v bar title("Proportion of houshold having land") pct yscale(off) xlab("")
-betterbarci sectH_dur if L01==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section L | Land ownership and tenure") xlab("")
+betterbarci sectL_dur if L01==1, over(A01) n format(%9.0f) v bar ytitle("Minutes") title("Duration Section L | Land ownership and tenure") xlab("")
 qui graph export "${gsdOutput}/sec_L_dur.jpg", as(jpg) name("Graph") quality(100) replace	
 
 **# M	Agriculture	L01==1 & parcel_roster.Count(x=>x.L07.ContainsAny(1,2,7))
@@ -267,17 +306,20 @@ lab var T03_hh "Climate shocks"
 betterbarci Women_15_49_hh E58 H01_hh L01 L01_a L07_hh O01 P02 Q01_Q08  T03_hh, n bar pct  ytitle("% of households") title("Selected sections' relevance")
 qui graph export "${gsdOutput}/sections_relevance.jpg", as(jpg) name("Graph") quality(100) replace	
 
-   
+local letter L H N M N O P Q T 
+foreach l of local letter {
+	 cap qui gen sect`l'_prop=sect`l'_dur/cleandur_min
+}   
 tabstat sectE_fertility_dur sectE_fert_prop if Women_15_49_hh==1,s(mean median) //fertility
-mean sectE_deaths_prop if E58==1 //Deaths
-mean sectH_dur if H01_hh==1 //Domestic tourism
-mean sectH_dur if L01==1 //Land ownership/tenure
-mean sectN_dur if L01==1 //Agriculture input/output
-mean sectM_dur if L07_hh==1 //Agriculture
-mean sectO_dur if O01==1 //Livestock
-mean sectP_dur if P02==1 //Enterprise
-mean sectQ_dur if Q01_Q08==1 //Transfers
-mean sectT_dur if T03_hh==1 //Climate shocks
+tabstat sectE_deaths_dur sectE_deaths_prop if E58==1,s(mean median) //Deaths
+tabstat sectH_dur sectH_prop if H01_hh==1,s(mean median) //Domestic tourism
+tabstat sectL_dur sectL_prop if L01==1,s(mean median) //Land ownership/tenure
+tabstat sectN_dur sectN_prop if L01==1,s(mean median) //Agriculture input/output
+tabstat sectM_dur sectM_prop if L07_hh==1,s(mean median) //Agriculture
+tabstat sectO_dur sectO_prop if O01==1,s(mean median) //Livestock
+tabstat sectP_dur sectP_prop if P02==1,s(mean median) //Enterprise
+tabstat sectQ_dur sectQ_prop if Q01_Q08==1,s(mean median) //Transfers
+tabstat sectT_dur sectT_prop if T03_hh==1,s(mean median) //Climate shocks
 ex
 
 //Overall county level diagnostics
