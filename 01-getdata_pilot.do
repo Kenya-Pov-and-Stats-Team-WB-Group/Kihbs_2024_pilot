@@ -143,6 +143,8 @@ qui graph export "${gsdOutput}/risk_score_bycounty.jpg", as(jpg) name("Graph") q
 
 qui save "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", replace
 
+
+
 *Selected section durations
 use "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta", clear 
 
@@ -181,10 +183,102 @@ lab var  sectU_dur "SECTION U: FOOD SECURITY - LAST 12 MONTHS"
 lab var  sectV_dur "SECTION V: HOUSEHOLD JUSTICE MODULE" 
 lab var  sectW_dur "SECTION W: HOUSEHOLD ICT AND E-WASTE" 
 lab var sectX_dur "SECTION X: SOCIAL PROTECTION"
+lab var cleandur_min "Overall interview duration"
 preserve 
 drop sectE_f_dur sectE_d_dur sectE_f_dur sectE_d_dur
-qui tabstat2excel sect*, filename("C:\Users\wb562201\OneDrive - WBG\Countries\Kenya\KEN_KIHBS_2024_pilot\Temp/sections_duration.xlsx")
+qui tabstat2excel sect* cleandur_min, filename("C:\Users\wb562201\OneDrive - WBG\Countries\Kenya\KEN_KIHBS_2024_pilot\Temp/sections_duration.xlsx")
 restore
+
+**# Progress report (by county) 
+use "${gsdDataRaw}/sample_pilot.dta", clear 
+destring A09, replace
+gen cty="MOMBASA" if A01=="1"
+replace cty="KWALE" if A01=="2"
+replace cty="GARISSA" if A01=="07"
+replace cty="MARSABIT" if A01=="10"
+replace cty="MAKUENI" if A01=="17"
+replace cty="MURANG'A" if A01=="21"
+replace cty="TURKANA" if A01=="23"
+replace cty="UASIN GISHU" if A01=="27"
+replace cty="NAKURU" if A01=="32"
+replace cty="KAKAMEGA" if A01=="37"
+replace cty="MIGORI" if A01=="44"
+replace cty="NAIROBI CITY" if A01=="47"
+destring A01, replace
+labmask A01,values(cty)
+gcollapse (nunique) A09, by(A01)
+gen target=A09*12 
+merge 1:m A01 using "${gsdDataRaw}//KIHBS_2024_pilot_completed.dta",force nogen 
+encode interview__id, gen(interview__idn)
+lab drop interview__idn
+gcollapse (nunique) interview__idn (firstnm) target, by(A01)
+gen completion_rate=(interview__idn/target)*100
+clonevar countyid=A01
+decode A01,gen(countylabel)
+qui save "${gsdTemp}/cty_completion.dta", replace
+
+
+qui cd "${gsdTemp}"
+shp2dta using "${gsdDataRaw}/\kenyan_counties.shp", database(state_data) coordinates(state_coordinates) genid(id) gencentroids(c) replace
+use "state_coordinates.dta", clear
+geo2xy _Y _X,   projection( mercator) replace
+local lon0 = r(lon0)
+local f = r(f)
+local a = r(a)
+save "state_coordinates_mercator.dta", replace
+use state_data,clear
+merge 1:1 countyid using "${gsdTemp}/cty_completion.dta", keepusing(completion_rate countylabel) //keep(3)
+save "state_data2",replace
+gen labtype  = 1
+append using state_data2
+replace labtype = 2 if labtype==.
+replace countylabel = string(completion_rate, "%3.1f") if labtype ==2
+keep x_c y_c countylabel labtype
+geo2xy  y_c x_c,   projection( mercator, `a' `f' `lon0' ) replace
+save maplabels, replace
+use state_data2,clear
+spmap completion_rate using "state_coordinates_mercator.dta", id(id) fcolor(RdYlGn) ocolor(white ..) label(data(maplabels) xcoord(x_c)  ycoord(y_c) label(countylabel) by(labtype)  size(*0.85 ..) pos(12 0) ) cln(5) legenda(off) 
+
+
+
+
+
+
+
+recode int_status (missing = .a)
+lab def int_status .a "Not submitted",add
+decode district,gen(district_s)
+qui putexcel set "${gsdOutput}/postplanting/progreport_bydistrict_postplanting.xlsx",  sheet("Overall") replace
+qui cret list 
+qui putexcel A1=("Completion report. Date: "),vcenter hcenter bold 
+qui putexcel B1=("`c(current_date)'"),vcenter hcenter bold 
+qui putexcel A2=("District"),vcenter hcenter bold 
+qui putexcel B2=("Completed"),vcenter hcenter bold 
+qui putexcel C2=("Target"),vcenter hcenter bold 
+qui putexcel D2=("Perc. target"),vcenter hcenter bold 
+local i=3
+forval k=1/5 {
+	local v : label (district) `k'
+	qui putexcel A`i'=("`v'")
+	qui count if _merge==3 & district==`k'
+	qui putexcel B`i'=(`r(N)')
+	qui putexcel C`i'=(180)
+
+	qui putexcel D`i'=(`perc'),nformat(percents)
+	sort district int_status ea_code submissiondate status  
+	qui levelsof district_s if district==`k',local(d)
+	qui export excel hhid ea_code two_plots status responsible  int_status submissiondate if district==`k' using "${gsdOutput}/postplanting/progreport_bydistrict_postplanting.xlsx", sheet(`d') sheetmodify firstrow(variables) keepcellfmt	
+	local i=`i'+1	
+}
+qui putexcel A8=("Total")
+qui count if _merge==3
+qui putexcel B8=(`r(N)')
+qui putexcel C8=(900)
+local perc=`r(N)'/900
+qui putexcel D8=(`perc')
+restore 
+
+**# Progress report (by cluster, within each county)
 
 lab def prefill 0 "Single layer" 1 "2 layered"
 lab val prefill prefill

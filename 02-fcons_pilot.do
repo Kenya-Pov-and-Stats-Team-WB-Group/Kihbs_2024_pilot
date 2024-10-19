@@ -1,5 +1,6 @@
 use "${gsdRawOutput}/pilot/KIHBS24_pilot_fooditems.dta", clear
-merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing(A16 A06 A21 responsible prefill prefill_group province) nogen keep(3)
+merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing(A16 A06 A21 responsible prefill prefill_group province rawdur_min) nogen keep(3)
+gen recall_14d=inrange(rawdur_min,15000,31000)
 
 bys A01 food__id: egen uv_p50_county=median(unit_value)
 bys province food__id: egen uv_p50_prov=median(unit_value)
@@ -18,7 +19,7 @@ gen purch_item_count = q1__1==1
 sort interview__id 
 br interview__id food__id qty_kglt_2 uv fcons
 encode responsible,gen(responsible1)
-gcollapse (sum) fcons *item_count (mean) A16 (first) A01 A15 A21 province responsible1 prefill prefill_group total_kcal_pp_pd, by(interview__id A06)
+gcollapse (sum) fcons *item_count (mean) A16 (first) A01 A15 A21 province responsible1 prefill prefill_group total_kcal_pp_pd recall_14d, by(interview__id A06)
 
 *Add food away from home 
 merge m:1 interview__id using "${gsdDataRaw}/KIHBS_2024_pilot_completed.dta", keepusing( YB03a_* YB03b_*) nogen keep(3) //bring in expenditures on food away from home
@@ -69,6 +70,8 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 		
 		betterbarci purch_item_count cons_item_count, n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items Consumed vs Purchased") subtitle("National") saving("${gsdOutput}/fditem_conspurch_count_national.gph", replace) xlab(2 "Consumed" 8 "Purchased")
 		betterbarci purch_item_count cons_item_count, over(A01) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items Consumed vs Purchased") subtitle("by County") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(18.5 "Consumed" 57.5 "Purchased")
+		betterbarci purch_item_count cons_item_count, over(recall_14d) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items Consumed vs Purchased") subtitle("by length of diary") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(18.5 "Consumed" 57.5 "Purchased")
+
 		
 		
 		betterbarci purch_item_count cons_item_count if A01==27, over(responsible1) v n format(%9.0f) bar ytitle("# of food items") title("# of Food Items") subtitle("Consumed vs Purchased")
@@ -98,7 +101,7 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 			betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000, over(A01) vertical n format(%9.0f) bar ytitle("Kilocalories per person per day") title("Kilocalories per person per day") subtitle("Including hh with zero calories") saving("${gsdOutput}/kcal_pp_pd_wzeros_bycounty.gph", replace) xlab("") note("Exlcuding households with more than 10,000 kilocalories")
 			
 		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000 & A01==23, over(A21) vertical n format(%9.0f) bar ytitle("Kilocalories per person per day") title("Kilocalories per person per day") subtitle("Turkana County") xlab("") note("Exlcuding households with more than 10,000 kilocalories")
-			
+		betterbarci total_kcal_pp_pd if  A01==47, over(recall_14d) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items Consumed vs Purchased") subtitle("by length of diary") xlab(18.5 "Consumed" 57.5 "Purchased") saving("${gsdOutput}/kcal_pp_pd_bydiarylength.gph", replace)
 			
 
 
