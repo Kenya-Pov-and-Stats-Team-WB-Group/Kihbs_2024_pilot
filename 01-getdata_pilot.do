@@ -241,43 +241,6 @@ spmap completion_rate using "state_coordinates_mercator.dta", id(id) fcolor(RdYl
 
 
 
-
-
-
-
-recode int_status (missing = .a)
-lab def int_status .a "Not submitted",add
-decode district,gen(district_s)
-qui putexcel set "${gsdOutput}/postplanting/progreport_bydistrict_postplanting.xlsx",  sheet("Overall") replace
-qui cret list 
-qui putexcel A1=("Completion report. Date: "),vcenter hcenter bold 
-qui putexcel B1=("`c(current_date)'"),vcenter hcenter bold 
-qui putexcel A2=("District"),vcenter hcenter bold 
-qui putexcel B2=("Completed"),vcenter hcenter bold 
-qui putexcel C2=("Target"),vcenter hcenter bold 
-qui putexcel D2=("Perc. target"),vcenter hcenter bold 
-local i=3
-forval k=1/5 {
-	local v : label (district) `k'
-	qui putexcel A`i'=("`v'")
-	qui count if _merge==3 & district==`k'
-	qui putexcel B`i'=(`r(N)')
-	qui putexcel C`i'=(180)
-
-	qui putexcel D`i'=(`perc'),nformat(percents)
-	sort district int_status ea_code submissiondate status  
-	qui levelsof district_s if district==`k',local(d)
-	qui export excel hhid ea_code two_plots status responsible  int_status submissiondate if district==`k' using "${gsdOutput}/postplanting/progreport_bydistrict_postplanting.xlsx", sheet(`d') sheetmodify firstrow(variables) keepcellfmt	
-	local i=`i'+1	
-}
-qui putexcel A8=("Total")
-qui count if _merge==3
-qui putexcel B8=(`r(N)')
-qui putexcel C8=(900)
-local perc=`r(N)'/900
-qui putexcel D8=(`perc')
-restore 
-
 **# Progress report (by cluster, within each county)
 
 lab def prefill 0 "Single layer" 1 "2 layered"
