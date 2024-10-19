@@ -115,17 +115,27 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 			betterbarci item_count, over(prefill) vertical n format(%9.0f) bar ytitle("# of food items") title("# of Food Items by Layered Approach") subtitle("Consumed or Purchased") saving("${gsdOutput}/fditem_count_by2layer.gph", replace) xlab("")	
 			// Urban Rural
 				betterbarci item_count, over(prefill) by(A15) vertical n format(%9.0f) bar ytitle("# of food items") title("# of Food Items by Layered Approach") subtitle("by Urban/Rural") saving("${gsdOutput}/fditem_count_by2layer_urban_rual.gph", replace) xlab(3.5 "Rural" 12.5 "Urban")
+				
 		// Consumption vs purchased
-			betterbarci purch_item_count cons_item_count, over(prefill) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items by Layered Approach") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_bycounty.gph", replace) xlab(3.5 "Consumed" 12.5 "Purchased")
+			betterbarci purch_item_count cons_item_count, over(prefill) n v format(%9.0f) bar ytitle("# of food items") title("# of Food Items by Layered Approach") subtitle("Consumed vs Purchased") saving("${gsdOutput}/fditem_conspurch_count_by2layer_national.gph", replace) xlab(3.5 "Consumed" 12.5 "Purchased")
+			
 		// Share with zero items consumed
 			betterbarci no_items_cons, over(prefill) n v bar ytitle("Share of households") pct title("Households with zero food items consumed") subtitle("By Layered Approach") saving("${gsdOutput}/sh_nofood_by2layer.gph", replace) xlab("")
 	
 	// At home expenditures
 		ttest fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), by(prefill)
-		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(prefill) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Expenditures per AdEq") title("Monthly At-home Consumption Expenditures per AdEq")  xlab("") saving("${gsdOutput}/fcons_athome_padq_pm_by2layer.gph", replace)
+		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill) vertical n format(%9.0f) bar   xlab("") saving("${gsdOutput}/fcons_athome_padq_pm_by2layer.gph", replace) subtitle("National") 
 		// Urban Rural
-		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,75000), over(prefill) by(A15) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Expenditures per AdEq") title("Monthly At-home Consumption Expenditures per AdEq") xlab(3.5 "Rural" 12.5 "Urban") saving("${gsdOutput}/fcons_athome_padq_pm_by2layer_rururb.gph", replace)
+		betterbarci fcons_athome_padq_pm if inrange(fcons_athome_padq_pm,1,100000), over(prefill) by(A15) vertical n format(%9.0f) bar ytitle("Monthly At-home Consumption Expenditures per AdEq") subtitle("By residence") xlab(3.5 "Rural" 12.5 "Urban") saving("${gsdOutput}/fcons_athome_padq_pm_by2layer_rururb.gph", replace) legend(off)
+		gr combine "${gsdOutput}/fcons_athome_padq_pm_by2layer_rururb.gph" "${gsdOutput}/fcons_athome_padq_pm_by2layer.gph", ycom title("Monthly At-home Consumption Expenditures per AdEq")
 		
+	// Calories
+		ttest total_kcal_pp_pd if total_kcal_pp_pd<10000, by(prefill)
+		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000, over(prefill) vertical n format(%9.0f) bar   xlab("") saving("${gsdOutput}/kcal_athome_padq_pm_by2layer.gph", replace) subtitle("National") 
+		// Urban Rural
+		betterbarci total_kcal_pp_pd if total_kcal_pp_pd<10000, over(prefill) by(A15) vertical n format(%9.0f) bar ytitle("Kilocalories per person per day") subtitle("By residence") xlab(3.5 "Rural" 12.5 "Urban") saving("${gsdOutput}/kcal_athome_padq_pm_by2layer_rururb.gph", replace) legend(off)
+		gr combine "${gsdOutput}/kcal_athome_padq_pm_by2layer_rururb.gph" "${gsdOutput}/kcal_athome_padq_pm_by2layer.gph", ycom title("Kilocalories per person per day")
+
 	mkdensity fcons_athome_padq_pm if fcons_athome_padq_pm<20000,over(prefill)
 	
 // Checking incidence of household FAFH versus individual
@@ -137,7 +147,7 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 		
 		ttest any_fafh_hhm, by(prefill_group)
 		betterbarci any_fafh_hhm, over(prefill_group) n v bar ytitle("Share of households") pct title("Households with any FAFH at member level") subtitle("By Approach") saving("${gsdOutput}/sh_anyfafh_byapproach.gph", replace) xlab("")
-		betterbarci any_fafh_hhm, over(prefill_group) by(A15) n v bar ytitle("Share of households") pct title("Households with any FAFH at member level") subtitle("By Approach") saving("${gsdOutput}/sh_anyfafh_byapproach_urbrur.gph", replace) 
+		betterbarci any_fafh_hhm, over(prefill_group) by(A15) n v bar ytitle("Share of households") pct title("Households with any FAFH at member level") subtitle("By Approach") saving("${gsdOutput}/sh_anyfafh_byapproach_urbrur.gph", replace) xlab(3.5 "Rural" 12.5 "Urban")		
 		
 	// How many members report FAFH
 		ttest num_FAFH, by(prefill_group)
@@ -146,12 +156,23 @@ gen fcons_padq_pm=fcons_hh_annual/adq_scale/12
 		
 	// Level of FAFH expenditure reported at individual level
 		ttest fafh_hhm_padq_pm, by(prefill_group)
-		betterbarci fafh_hhm_padq_pm if fafh_hhm_padq_pm<20000, over(prefill_group) v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("From HH Member Version") saving("${gsdOutput}/fafh_exp_member_byappraoch.gph", replace) xlab("")		
+		betterbarci fafh_hhm_padq_pm if fafh_hhm_padq_pm<20000, over(prefill_group) v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") subtitle("From HH Member Version") saving("${gsdOutput}/fafh_exp_member_byappraoch.gph", replace) xlab("")		
 		betterbarci fafh_hhm_padq_pm if fafh_hhm_padq_pm<20000, over(prefill_group) by(A15) v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("From HH Member Version") saving("${gsdOutput}/fafh_exp_member_byappraoch_urbrur.gph", replace) xlab(3.5 "Rural" 12.5 "Urban")		
+		
+
 	
 	// Comparing household and individual reported FAFH
-		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1, v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("HH vs Member version") saving("${gsdOutput}/fafh_exp_member_v_hh.gph", replace) xlab(2 "HH Level" 8 "Member level")	
-		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1, over(A15) v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("HH vs Member version") saving("${gsdOutput}/fafh_exp_member_v_hh_yurbrur.gph", replace) xlab(3.5 "HH Level" 12.5 "Member level")	
+		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1 & fafh_hhm_padq_pm<20000, v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("HH vs Member version") saving("${gsdOutput}/fafh_exp_member_v_hh.gph", replace) xlab(2 "HH Level" 8 "Member level")	
+		betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & fafh_hhm_padq_pm<20000, over(A15) v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq | ") subtitle("HH vs Member version") saving("${gsdOutput}/fafh_exp_member_v_hh_yurbrur.gph", replace) xlab(3.5 "HH Level" 12.5 "Member level")	
+		
+		
+		
+	// Comparing total reported FAFH
+		gen fafh_tot_padq_pm = fafh_hhm_padq_pm
+		replace  fafh_tot_padq_pm = fafh_tot_padq_pm +  fafh_padq_pm
+		betterbarci  fafh_tot_padq_pm if fafh_hhm_padq_pm<20000, over(prefill_group) v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("HH vs Member version") saving("${gsdOutput}/fafh_exp_tot_v_hh.gph", replace) xlab(2 "HH Level" 8 "Member level")	
+		betterbarci  fafh_tot_padq_pm if fafh_hhm_padq_pm<20000, over(prefill_group) by(A15) v n format(%9.0f) bar ytitle("Monthly FAFH Expenditures") title("Monthly FAFH Expenditures per AdEq") subtitle("HH + Member version") saving("${gsdOutput}/fafh_exp_tot_v_hh_byurban_rural.gph", replace) xlab(3.5 "Rural" 12.5 "Urban")	
+
 		*betterbarci fafh_hhm_padq_pm fafh_padq_pm if prefill_group==1 & A16!=1 & A16<10 & fafh_hhm_padq_pm<10000, over(A16) vertical n
 		
 	// Any impact on at home conusmption (just out of curiosity)
