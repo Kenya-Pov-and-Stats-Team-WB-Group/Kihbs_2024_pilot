@@ -40,8 +40,8 @@ display "Your Stata serial number is: ${serial_number}"
 
 *Emanuel
 if (inlist("${suser}","wb562201", "WB562201")) {
-	local swdLocal = "C:\//Users\/wb562201\/OneDrive - WBG\/Countries\/Kenya\/KEN_KIHBS_2024_pilot"
-	local gdrive = "G:\/My Drive\/Kihbs_2025"
+	local swdLocal = "C:/Users\/wb562201/OneDrive - WBG/Countries/Kenya/KEN_KIHBS_2024_pilot"
+	local gdrive = "G:/My Drive/Kihbs_2025"
 	
 	*Store api credentials (User specific - sent via email for security)
 	import delimited "`swdLocal'\0-RawInput\api_credentials_silas.csv", varnames(1) 
@@ -374,4 +374,3 @@ program define outliers_detect_fix
 	qui replace replacement_level=.a if `1'==.a
 	lab drop replacement_level
 end
-
